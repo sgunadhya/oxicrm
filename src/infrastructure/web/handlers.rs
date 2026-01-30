@@ -1,5 +1,8 @@
 use crate::application::ports::input::{CreateWorkspaceUseCase, RecordUseCase};
+use crate::application::ports::output::PersonRepository;
+use crate::application::use_cases::create_person::CreatePerson;
 use crate::application::use_cases::create_workspace::CreateWorkspace;
+use crate::application::use_cases::manage_person::ManagePerson;
 use crate::application::use_cases::register_user::RegisterUser;
 use crate::domain::OpportunityStage;
 use axum::{
@@ -16,6 +19,9 @@ pub struct AppState {
     pub record_use_case: Arc<dyn RecordUseCase>,
     pub register_user: Arc<RegisterUser>,
     pub create_workspace: Arc<CreateWorkspace>,
+    pub create_person: Arc<CreatePerson>,
+    pub manage_person: Arc<ManagePerson>,
+    pub person_repo: Arc<dyn PersonRepository>,
 }
 
 #[derive(Deserialize)]
@@ -116,6 +122,55 @@ pub async fn post_create_workspace_handler(
         Err(e) => {
             eprintln!("Error creating workspace: {:?}", e);
             "Error creating workspace".to_string()
+        }
+    }
+}
+
+#[derive(Deserialize)]
+pub struct CreatePersonPayload {
+    pub name: String,
+    pub email: String,
+    pub position: i32,
+}
+
+pub async fn get_people_handler(State(state): State<AppState>) -> impl IntoResponse {
+    let people = state.person_repo.find_all().await.unwrap_or(vec![]);
+    crate::infrastructure::web::fragments::layout(
+        crate::infrastructure::web::fragments::person_list(&people),
+    )
+}
+
+pub async fn post_create_person_handler(
+    State(state): State<AppState>,
+    axum::Form(payload): axum::Form<CreatePersonPayload>,
+) -> impl IntoResponse {
+    match state
+        .create_person
+        .execute(payload.name, payload.email, payload.position)
+        .await
+    {
+        Ok(_) => {
+            // Return list to update table via HTMX or redirect
+            // For now, redirect to list
+            let people = state.person_repo.find_all().await.unwrap_or(vec![]);
+            crate::infrastructure::web::fragments::person_list(&people)
+        }
+        Err(e) => {
+            eprintln!("Error creating person: {:?}", e);
+            maud::html! { (format!("Error: {:?}", e)) }
+        }
+    }
+}
+
+pub async fn delete_person_handler(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> impl IntoResponse {
+    match state.manage_person.delete(id).await {
+        Ok(_) => "", // Return empty string to remove element if HTMX target is row
+        Err(e) => {
+            eprintln!("Error deleting person: {:?}", e);
+            "Error deleting person"
         }
     }
 }

@@ -59,7 +59,9 @@ async fn main() {
     // Note: RecordBoardCard struct needs update to accept these new dependencies if we want to use them.
     // For now, adhering to the existing struct definition which only required repo.
     // If we want to use them, we'd update RecordBoardCard.
+    use application::use_cases::create_person::CreatePerson;
     use application::use_cases::create_workspace::CreateWorkspace;
+    use application::use_cases::manage_person::ManagePerson;
     use application::use_cases::register_user::RegisterUser;
     // ... imports ...
 
@@ -71,12 +73,17 @@ async fn main() {
         user_repo: repo.clone(),
     });
     let create_workspace_use_case = Arc::new(CreateWorkspace::new(repo.clone()));
+    let create_person_use_case = Arc::new(CreatePerson::new(repo.clone()));
+    let manage_person_use_case = Arc::new(ManagePerson::new(repo.clone()));
 
     // 5. Initialize App State
     let app_state = AppState {
         record_use_case: record_use_case.clone(),
         register_user: register_user_use_case.clone(),
         create_workspace: create_workspace_use_case.clone(),
+        create_person: create_person_use_case.clone(),
+        manage_person: manage_person_use_case.clone(),
+        person_repo: repo.clone(),
     };
 
     // ... seeding ...
@@ -93,6 +100,23 @@ async fn main() {
             "/workspaces",
             get(infrastructure::web::handlers::get_create_workspace_handler)
                 .post(infrastructure::web::handlers::post_create_workspace_handler),
+        )
+        .route(
+            "/people",
+            get(infrastructure::web::handlers::get_people_handler)
+                .post(infrastructure::web::handlers::post_create_person_handler),
+        )
+        .route(
+            "/people/new",
+            get(|| async {
+                crate::infrastructure::web::fragments::layout(
+                    crate::infrastructure::web::fragments::person_form(),
+                )
+            }),
+        )
+        .route(
+            "/people/:id",
+            axum::routing::delete(infrastructure::web::handlers::delete_person_handler),
         )
         .route("/cards/:id/move", axum::routing::post(move_card_handler))
         .with_state(app_state);

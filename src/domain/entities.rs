@@ -40,7 +40,7 @@ pub struct Person {
     pub updated_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
     pub name: String,
-    pub emails: Vec<String>,
+    pub email: String,
     pub position: i32,
     pub company_id: Option<Uuid>,
 }

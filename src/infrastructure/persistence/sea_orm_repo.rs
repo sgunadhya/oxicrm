@@ -2,14 +2,71 @@ use super::entities::opportunity::{self, Entity as OpportunityEntity};
 use crate::application::ports::output::{
     OpportunityRepository, UserRepository, WorkspaceRepository,
 };
-use crate::domain::{DomainError, Opportunity, OpportunityStage, User, Workspace, WorkspaceMember};
-use crate::infrastructure::persistence::entities::{user, workspace, workspace_member};
+use crate::domain::{
+    DomainError, Opportunity, OpportunityStage, Person, User, Workspace, WorkspaceMember,
+};
+use crate::infrastructure::persistence::entities::{person, user, workspace, workspace_member};
 use async_trait::async_trait;
 use sea_orm::*;
 use uuid::Uuid;
 
 pub struct SeaOrmRepo {
     pub db: DatabaseConnection,
+}
+
+#[async_trait]
+impl crate::application::ports::output::PersonRepository for SeaOrmRepo {
+    async fn find_by_email(&self, email: &str) -> Result<Option<Person>, DomainError> {
+        let model = person::Entity::find()
+            .filter(person::Column::Email.eq(email))
+            .filter(person::Column::DeletedAt.is_null())
+            .one(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(model.map(|m| m.to_domain()))
+    }
+
+    async fn create(&self, person: Person) -> Result<Person, DomainError> {
+        let model = person::ActiveModel {
+            id: Set(person.id),
+            name: Set(person.name),
+            email: Set(person.email),
+            position: Set(person.position),
+            company_id: Set(person.company_id),
+            created_at: Set(person.created_at.into()),
+            updated_at: Set(person.updated_at.into()),
+            deleted_at: Set(None),
+        };
+
+        let result = model
+            .insert(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(result.to_domain())
+    }
+
+    async fn find_all(&self) -> Result<Vec<Person>, DomainError> {
+        let models = person::Entity::find()
+            .filter(person::Column::DeletedAt.is_null())
+            .all(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+    }
+
+    async fn delete(&self, id: Uuid) -> Result<(), DomainError> {
+        // Soft delete
+        let model = person::ActiveModel {
+            id: Set(id),
+            deleted_at: Set(Some(chrono::Utc::now().into())),
+            ..Default::default()
+        };
+        model
+            .update(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(())
+    }
 }
 
 #[async_trait]

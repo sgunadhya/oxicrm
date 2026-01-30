@@ -1,4 +1,4 @@
-use crate::domain::{Opportunity, OpportunityStage};
+use crate::domain::{Opportunity, OpportunityStage, Person};
 use maud::{html, Markup, DOCTYPE};
 
 pub fn layout(content: Markup) -> Markup {
@@ -116,6 +116,69 @@ pub fn create_workspace_form() -> Markup {
                 button type="submit" class="bg-blue-500 text-white p-2 rounded" { "Create" }
             }
             div id="result" class="mt-4" {}
+        }
+    }
+}
+
+pub fn person_list(people: &[Person]) -> Markup {
+    html! {
+        div class="max-w-4xl mx-auto mt-10" {
+            div class="flex justify-between items-center mb-6" {
+                 h2 class="text-2xl font-bold" { "People" }
+                 a href="/people/new" class="bg-blue-500 text-white px-4 py-2 rounded" { "Add Person" }
+            }
+
+            table class="min-w-full bg-white border" {
+                thead {
+                    tr {
+                        th class="p-4 border-b text-left" { "Name" }
+                        th class="p-4 border-b text-left" { "Email" }
+                        th class="p-4 border-b text-left" { "Position" }
+                        th class="p-4 border-b text-left" { "Actions" }
+                    }
+                }
+                tbody {
+                    @for person in people {
+                        tr class="hover:bg-gray-50" {
+                            td class="p-4 border-b" { (person.name) }
+                            td class="p-4 border-b" { (person.email) }
+                            td class="p-4 border-b" { (person.position) }
+                            td class="p-4 border-b" {
+                                button
+                                    hx-delete=(format!("/people/{}", person.id))
+                                    hx-target="closest tr"
+                                    hx-swap="outerHTML"
+                                    class="text-red-500 hover:text-red-700"
+                                { "Delete" }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+pub fn person_form() -> Markup {
+    html! {
+        div class="max-w-md mx-auto mt-10" {
+            form hx-post="/people" hx-target="body" {
+                h2 class="text-2xl font-bold mb-4" { "Add New Person" }
+
+                label class="block mb-2" { "Name" }
+                input type="text" name="name" class="border p-2 w-full mb-4" required;
+
+                label class="block mb-2" { "Email" }
+                input type="email" name="email" class="border p-2 w-full mb-4" required;
+
+                label class="block mb-2" { "Position (Integer)" }
+                input type="number" name="position" value="0" class="border p-2 w-full mb-4";
+
+                div class="flex justify-between items-center" {
+                     a href="/people" class="text-gray-500" { "Cancel" }
+                     button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded" { "Save" }
+                }
+            }
         }
     }
 }

@@ -1,0 +1,121 @@
+warning: variant `Table` is never constructed
+  --> migration/src/m20240130_000002_create_users.rs:52:5
+   |
+51 | enum Users {
+   |      ----- variant in this enum
+52 |     Table,
+   |     ^^^^^
+   |
+   = note: `#[warn(dead_code)]` on by default
+
+warning: `migration` (lib) generated 1 warning
+   Compiling oxicrm v0.1.0 (/Users/sushantsrivastava/code/oxicrm)
+warning: methods `create_customer` and `create_subscription` are never used
+ --> src/application/ports/billing.rs:5:14
+  |
+4 | pub trait BillingProvider: Send + Sync {
+  |           --------------- methods in this trait
+5 |     async fn create_customer(&self, email: &str) -> Result<String, String>; // Returns external customer ID
+  |              ^^^^^^^^^^^^^^^
+6 |     async fn create_subscription(&self, customer_id: &str, plan_id: &str)
+  |              ^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(dead_code)]` on by default
+
+warning: method `send` is never used
+ --> src/application/ports/external.rs:6:14
+  |
+5 | pub trait WebhookSender: Send + Sync {
+  |           ------------- method in this trait
+6 |     async fn send(&self, url: &str, payload: Value) -> Result<(), String>;
+  |              ^^^^
+
+warning: method `has_permission` is never used
+ --> src/application/ports/identity.rs:7:14
+  |
+5 | pub trait IdentityProvider: Send + Sync {
+  |           ---------------- method in this trait
+6 |     async fn get_current_user_id(&self) -> Result<Option<Uuid>, String>;
+7 |     async fn has_permission(&self, user_id: Uuid, permission: &str) -> Result<bool, String>;
+  |              ^^^^^^^^^^^^^^
+
+warning: trait `RegisterUserUseCase` is never used
+  --> src/application/ports/input.rs:17:11
+   |
+17 | pub trait RegisterUserUseCase: Send + Sync {
+   |           ^^^^^^^^^^^^^^^^^^^
+
+warning: methods `publish` and `subscribe` are never used
+  --> src/application/ports/messaging.rs:13:14
+   |
+12 | pub trait EventBus: Send + Sync {
+   |           -------- methods in this trait
+13 |     async fn publish(&self, event: &DomainEvent) -> Result<(), String>;
+   |              ^^^^^^^
+14 |     async fn subscribe(
+   |              ^^^^^^^^^
+
+warning: method `enqueue` is never used
+  --> src/application/ports/scheduling.rs:12:14
+   |
+11 | pub trait JobQueue: Send + Sync {
+   |           -------- method in this trait
+12 |     async fn enqueue(&self, job: Job) -> Result<(), String>;
+   |              ^^^^^^^
+
+warning: methods `index_document` and `search` are never used
+ --> src/application/ports/search.rs:6:14
+  |
+5 | pub trait SearchIndex: Send + Sync {
+  |           ----------- methods in this trait
+6 |     async fn index_document(&self, index: &str, id: &str, document: Value) -> Result<(), String>;
+  |              ^^^^^^^^^^^^^^
+7 |     async fn search(&self, index: &str, query: &str) -> Result<Vec<Value>, String>;
+  |              ^^^^^^
+
+warning: methods `upload` and `delete` are never used
+ --> src/application/ports/storage.rs:5:14
+  |
+4 | pub trait StorageProvider: Send + Sync {
+  |           --------------- methods in this trait
+5 |     async fn upload(&self, file_name: &str, data: Vec<u8>) -> Result<String, String>; // Returns URL/Path
+  |              ^^^^^^
+6 |     async fn delete(&self, file_name: &str) -> Result<(), String>;
+  |              ^^^^^^
+
+warning: associated function `new` is never used
+  --> src/domain/entities.rs:77:12
+   |
+76 | impl Opportunity {
+   | ---------------- associated function in this implementation
+77 |     pub fn new(name: String, stage: OpportunityStage, amount: i64) -> Self {
+   |            ^^^
+
+warning: variants `Permission`, `NotFound`, and `InvalidState` are never constructed
+  --> src/domain/invariants.rs:9:5
+   |
+5  | pub enum DomainError {
+   |          ----------- variants in this enum
+...
+9  |     Permission(String),
+   |     ^^^^^^^^^^
+10 |     #[error("Entity not found")]
+11 |     NotFound,
+   |     ^^^^^^^^
+12 |     #[error("Invalid state transition: {0}")]
+13 |     InvalidState(String),
+   |     ^^^^^^^^^^^^
+   |
+   = note: `DomainError` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: function `oob_swap_counter` is never used
+ --> src/infrastructure/web/oob.rs:3:8
+  |
+3 | pub fn oob_swap_counter(count: i32) -> Markup {
+  |        ^^^^^^^^^^^^^^^^
+
+warning: `oxicrm` (bin "oxicrm") generated 11 warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.38s
+     Running `target/debug/oxicrm`
+Listening on 0.0.0.0:3001
+Services initialized: Time=2026-01-30T12:44:15.348990Z, Auth=Ok(Some(00000000-0000-0000-0000-000000000000)), Search=MockSearchIndex, Webhook=MockWebhookSender, Billing=MockBillingProvider, Storage=FileSystemStorage { root_dir: "storage" }, EventBus=InMemoryEventBus { sender: broadcast::Sender }, JobQueue=InMemoryJobQueue { sender: Sender { chan: Tx { inner: Chan { tx: Tx { block_tail: 0x1063f4450, tail_position: 0 }, semaphore: Semaphore { semaphore: Semaphore { permits: 100 }, bound: 100 }, rx_waker: AtomicWaker, tx_count: 1, rx_fields: "..." } } } }

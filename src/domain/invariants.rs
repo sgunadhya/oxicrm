@@ -24,10 +24,11 @@ impl HardGuard for Person {
         if self.name.trim().is_empty() {
             return Err(DomainError::Validation("Name cannot be empty".into()));
         }
-        for email in &self.emails {
-            if !email.contains('@') {
-                return Err(DomainError::Validation(format!("Invalid email: {}", email)));
-            }
+        if !self.email.contains('@') {
+            return Err(DomainError::Validation(format!(
+                "Invalid email: {}",
+                self.email
+            )));
         }
         Ok(())
     }
