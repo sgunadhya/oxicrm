@@ -367,7 +367,10 @@ pub async fn post_create_task_handler(
     axum::Form(payload): axum::Form<CreateTaskPayload>,
 ) -> impl IntoResponse {
     let due_at = payload.due_at.and_then(|d| {
-        chrono::DateTime::parse_from_rfc3339(&d).ok().map(|dt| dt.with_timezone(&chrono::Utc))
+        // Parse datetime-local format: "2026-03-15T14:30"
+        chrono::NaiveDateTime::parse_from_str(&d, "%Y-%m-%dT%H:%M")
+            .ok()
+            .map(|naive_dt| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(naive_dt, chrono::Utc))
     });
 
     match state
