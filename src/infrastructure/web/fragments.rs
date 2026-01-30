@@ -182,3 +182,69 @@ pub fn person_form() -> Markup {
         }
     }
 }
+
+pub fn company_list(companies: &[crate::domain::Company]) -> Markup {
+    html! {
+        div class="max-w-4xl mx-auto mt-10" {
+            div class="flex justify-between items-center mb-6" {
+                 h2 class="text-2xl font-bold" { "Companies" }
+                 a href="/companies/new" class="bg-blue-500 text-white px-4 py-2 rounded" { "Add Company" }
+            }
+
+            table class="min-w-full bg-white border" {
+                thead {
+                    tr {
+                        th class="p-4 border-b text-left" { "Name" }
+                        th class="p-4 border-b text-left" { "Domain" }
+                        th class="p-4 border-b text-left" { "Employees" }
+                        th class="p-4 border-b text-left" { "Actions" }
+                    }
+                }
+                tbody {
+                    @for company in companies {
+                        tr class="hover:bg-gray-50" {
+                            td class="p-4 border-b" { (company.name) }
+                            td class="p-4 border-b" { (company.domain_name) }
+                            td class="p-4 border-b" { (company.employees_count) }
+                            td class="p-4 border-b" {
+                                button
+                                    hx-delete=(format!("/companies/{}", company.id))
+                                    hx-target="closest tr"
+                                    hx-swap="outerHTML" // UI Sync fix
+                                    class="text-red-500 hover:text-red-700"
+                                { "Delete" }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+pub fn company_form() -> Markup {
+    html! {
+        div class="max-w-md mx-auto mt-10" {
+            form hx-post="/companies" hx-target="body" {
+                h2 class="text-2xl font-bold mb-4" { "Add New Company" }
+
+                label class="block mb-2" { "Name" }
+                input type="text" name="name" class="border p-2 w-full mb-4" required;
+
+                label class="block mb-2" { "Domain Name" }
+                input type="text" name="domain_name" class="border p-2 w-full mb-4" required placeholder="example.com";
+
+                label class="block mb-2" { "Address" }
+                textarea name="address" class="border p-2 w-full mb-4" {};
+
+                label class="block mb-2" { "Employees Count" }
+                input type="number" name="employees_count" value="0" class="border p-2 w-full mb-4";
+
+                div class="flex justify-between items-center" {
+                     a href="/companies" class="text-gray-500" { "Cancel" }
+                     button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded" { "Save" }
+                }
+            }
+        }
+    }
+}

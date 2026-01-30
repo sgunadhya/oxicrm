@@ -1,4 +1,4 @@
-use crate::domain::{DomainError, Opportunity, Person, User, Workspace, WorkspaceMember};
+use crate::domain::{Company, DomainError, Opportunity, Person, User, Workspace, WorkspaceMember};
 use async_trait::async_trait;
 
 #[async_trait]
@@ -27,4 +27,13 @@ pub trait WorkspaceRepository: Send + Sync {
     async fn create(&self, workspace: Workspace) -> Result<Workspace, DomainError>;
     async fn find_by_subdomain(&self, subdomain: &str) -> Result<Option<Workspace>, DomainError>;
     async fn add_member(&self, member: WorkspaceMember) -> Result<WorkspaceMember, DomainError>;
+}
+
+#[async_trait]
+pub trait CompanyRepository: Send + Sync {
+    async fn find_all(&self) -> Result<Vec<Company>, DomainError>;
+    async fn find_by_id(&self, id: uuid::Uuid) -> Result<Option<Company>, DomainError>;
+    async fn create(&self, company: Company) -> Result<Company, DomainError>;
+    async fn update(&self, company: Company) -> Result<Company, DomainError>;
+    async fn delete(&self, id: uuid::Uuid) -> Result<(), DomainError>;
 }

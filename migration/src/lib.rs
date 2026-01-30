@@ -5,6 +5,7 @@ mod m20240130_000002_create_users;
 mod m20240130_000003_create_workspaces;
 
 mod m20240130_000004_enhance_people;
+mod m20240130_000005_create_companies;
 
 pub struct Migrator;
 
@@ -16,6 +17,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20240130_000002_create_users::CreateUsers),
             Box::new(m20240130_000003_create_workspaces::CreateWorkspaces),
             Box::new(m20240130_000004_enhance_people::EnhancePeople),
+            Box::new(m20240130_000005_create_companies::CreateCompanies),
         ]
     }
 }

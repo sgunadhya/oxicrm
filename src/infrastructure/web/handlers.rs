@@ -1,7 +1,9 @@
 use crate::application::ports::input::{CreateWorkspaceUseCase, RecordUseCase};
-use crate::application::ports::output::PersonRepository;
+use crate::application::ports::output::{CompanyRepository, PersonRepository};
+use crate::application::use_cases::create_company::CreateCompany;
 use crate::application::use_cases::create_person::CreatePerson;
 use crate::application::use_cases::create_workspace::CreateWorkspace;
+use crate::application::use_cases::manage_company::ManageCompany;
 use crate::application::use_cases::manage_person::ManagePerson;
 use crate::application::use_cases::register_user::RegisterUser;
 use crate::domain::OpportunityStage;
@@ -22,6 +24,9 @@ pub struct AppState {
     pub create_person: Arc<CreatePerson>,
     pub manage_person: Arc<ManagePerson>,
     pub person_repo: Arc<dyn PersonRepository>,
+    pub create_company: Arc<CreateCompany>,
+    pub manage_company: Arc<ManageCompany>,
+    pub company_repo: Arc<dyn CompanyRepository>,
 }
 
 #[derive(Deserialize)]
@@ -171,6 +176,67 @@ pub async fn delete_person_handler(
         Err(e) => {
             eprintln!("Error deleting person: {:?}", e);
             "Error deleting person"
+        }
+    }
+}
+
+#[derive(Deserialize)]
+pub struct CreateCompanyPayload {
+    pub name: String,
+    pub domain_name: String,
+    pub address: Option<String>,
+    pub employees_count: Option<i32>,
+}
+
+pub async fn get_companies_handler(State(state): State<AppState>) -> impl IntoResponse {
+    let companies = state.company_repo.find_all().await.unwrap_or(vec![]);
+    crate::infrastructure::web::fragments::layout(
+        crate::infrastructure::web::fragments::company_list(&companies),
+    )
+}
+
+pub async fn get_create_company_handler() -> impl IntoResponse {
+    crate::infrastructure::web::fragments::layout(
+        crate::infrastructure::web::fragments::company_form(),
+    )
+}
+
+pub async fn post_create_company_handler(
+    State(state): State<AppState>,
+    axum::Form(payload): axum::Form<CreateCompanyPayload>,
+) -> impl IntoResponse {
+    match state
+        .create_company
+        .execute(
+            crate::application::use_cases::create_company::CreateCompanyInput {
+                name: payload.name,
+                domain_name: payload.domain_name,
+                address: payload.address,
+                employees_count: payload.employees_count,
+            },
+        )
+        .await
+    {
+        Ok(_) => {
+            let companies = state.company_repo.find_all().await.unwrap_or(vec![]);
+            crate::infrastructure::web::fragments::company_list(&companies)
+        }
+        Err(e) => {
+            eprintln!("Error creating company: {:?}", e);
+            maud::html! { (format!("Error: {:?}", e)) }
+        }
+    }
+}
+
+pub async fn delete_company_handler(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> impl IntoResponse {
+    match state.manage_company.delete(id).await {
+        Ok(_) => "",
+        Err(e) => {
+            eprintln!("Error deleting company: {:?}", e);
+            "Error deleting company"
         }
     }
 }

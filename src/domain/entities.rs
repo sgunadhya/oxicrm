@@ -54,7 +54,7 @@ pub struct Company {
     pub name: String,
     pub domain_name: String,
     pub address: Option<String>,
-    pub employees: Option<i32>,
+    pub employees_count: i32,
     pub position: i32,
 }
 

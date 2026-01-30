@@ -59,8 +59,10 @@ async fn main() {
     // Note: RecordBoardCard struct needs update to accept these new dependencies if we want to use them.
     // For now, adhering to the existing struct definition which only required repo.
     // If we want to use them, we'd update RecordBoardCard.
+    use application::use_cases::create_company::CreateCompany;
     use application::use_cases::create_person::CreatePerson;
     use application::use_cases::create_workspace::CreateWorkspace;
+    use application::use_cases::manage_company::ManageCompany;
     use application::use_cases::manage_person::ManagePerson;
     use application::use_cases::register_user::RegisterUser;
     // ... imports ...
@@ -75,6 +77,8 @@ async fn main() {
     let create_workspace_use_case = Arc::new(CreateWorkspace::new(repo.clone()));
     let create_person_use_case = Arc::new(CreatePerson::new(repo.clone()));
     let manage_person_use_case = Arc::new(ManagePerson::new(repo.clone()));
+    let create_company_use_case = Arc::new(CreateCompany::new(repo.clone()));
+    let manage_company_use_case = Arc::new(ManageCompany::new(repo.clone()));
 
     // 5. Initialize App State
     let app_state = AppState {
@@ -84,6 +88,9 @@ async fn main() {
         create_person: create_person_use_case.clone(),
         manage_person: manage_person_use_case.clone(),
         person_repo: repo.clone(),
+        create_company: create_company_use_case.clone(),
+        manage_company: manage_company_use_case.clone(),
+        company_repo: repo.clone(),
     };
 
     // ... seeding ...
@@ -117,6 +124,19 @@ async fn main() {
         .route(
             "/people/:id",
             axum::routing::delete(infrastructure::web::handlers::delete_person_handler),
+        )
+        .route(
+            "/companies",
+            get(infrastructure::web::handlers::get_companies_handler)
+                .post(infrastructure::web::handlers::post_create_company_handler),
+        )
+        .route(
+            "/companies/new",
+            get(infrastructure::web::handlers::get_create_company_handler),
+        )
+        .route(
+            "/companies/:id",
+            axum::routing::delete(infrastructure::web::handlers::delete_company_handler),
         )
         .route("/cards/:id/move", axum::routing::post(move_card_handler))
         .with_state(app_state);

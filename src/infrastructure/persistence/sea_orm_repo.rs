@@ -270,3 +270,84 @@ impl WorkspaceRepository for SeaOrmRepo {
         Ok(result.to_domain())
     }
 }
+
+#[async_trait]
+impl crate::application::ports::output::CompanyRepository for SeaOrmRepo {
+    async fn find_all(&self) -> Result<Vec<crate::domain::Company>, DomainError> {
+        use crate::infrastructure::persistence::entities::company;
+        let models = company::Entity::find()
+            .filter(company::Column::DeletedAt.is_null())
+            .all(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+    }
+
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<crate::domain::Company>, DomainError> {
+        use crate::infrastructure::persistence::entities::company;
+        let model = company::Entity::find_by_id(id)
+            .one(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(model.map(|m| m.to_domain()))
+    }
+
+    async fn create(
+        &self,
+        company: crate::domain::Company,
+    ) -> Result<crate::domain::Company, DomainError> {
+        use crate::infrastructure::persistence::entities::company;
+        let model = company::ActiveModel {
+            id: Set(company.id),
+            created_at: Set(company.created_at.into()),
+            updated_at: Set(company.updated_at.into()),
+            deleted_at: Set(None),
+            name: Set(company.name),
+            domain_name: Set(company.domain_name),
+            address: Set(company.address),
+            employees_count: Set(company.employees_count),
+        };
+
+        let result = model
+            .insert(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(result.to_domain())
+    }
+
+    async fn update(
+        &self,
+        company: crate::domain::Company,
+    ) -> Result<crate::domain::Company, DomainError> {
+        use crate::infrastructure::persistence::entities::company;
+        let model = company::ActiveModel {
+            id: Set(company.id),
+            updated_at: Set(chrono::Utc::now().into()), // refresh updated_at
+            name: Set(company.name),
+            domain_name: Set(company.domain_name),
+            address: Set(company.address),
+            employees_count: Set(company.employees_count),
+            ..Default::default()
+        };
+
+        let result = model
+            .update(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(result.to_domain())
+    }
+
+    async fn delete(&self, id: Uuid) -> Result<(), DomainError> {
+        use crate::infrastructure::persistence::entities::company;
+        let model = company::ActiveModel {
+            id: Set(id),
+            deleted_at: Set(Some(chrono::Utc::now().into())),
+            ..Default::default()
+        };
+        model
+            .update(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(())
+    }
+}
