@@ -24,6 +24,14 @@ pub enum OpportunityStage {
     Lost,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum UserState {
+    Unverified,
+    Active,
+    Suspended,
+    Deleted,
+}
+
 impl Default for TaskStatus {
     fn default() -> Self {
         Self::Todo

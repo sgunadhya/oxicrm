@@ -10,9 +10,7 @@ mod domain;
 mod infrastructure;
 mod shared;
 
-use application::ports::{
-    identity::IdentityProvider, input::RecordUseCase, output::OpportunityRepository, time::Clock,
-};
+use application::ports::{identity::IdentityProvider, time::Clock};
 use application::use_cases::RecordBoardCard;
 use infrastructure::persistence::sea_orm_repo::SeaOrmRepo;
 use infrastructure::web::handlers::{get_board_handler, move_card_handler, AppState};
@@ -61,45 +59,33 @@ async fn main() {
     // Note: RecordBoardCard struct needs update to accept these new dependencies if we want to use them.
     // For now, adhering to the existing struct definition which only required repo.
     // If we want to use them, we'd update RecordBoardCard.
+    use application::use_cases::register_user::RegisterUser;
+    // ... imports ...
+
+    // 4. Initialize Use Cases
     let record_use_case = Arc::new(RecordBoardCard {
         opportunity_repo: repo.clone(),
+    });
+    let register_user_use_case = Arc::new(RegisterUser {
+        user_repo: repo.clone(),
     });
 
     // 5. Initialize App State
     let app_state = AppState {
         record_use_case: record_use_case.clone(),
+        register_user: register_user_use_case.clone(),
     };
 
-    // Seed Data if empty
-    let opps = record_use_case.list_opportunities().await.unwrap_or(vec![]);
-    if opps.is_empty() {
-        println!("Seeding initial data...");
-        let _ = repo
-            .save(&domain::Opportunity::new(
-                "Tech Corp Deal".to_string(),
-                domain::OpportunityStage::New,
-                1000000,
-            ))
-            .await;
-        let _ = repo
-            .save(&domain::Opportunity::new(
-                "Startup License".to_string(),
-                domain::OpportunityStage::Meeting,
-                50000,
-            ))
-            .await;
-        let _ = repo
-            .save(&domain::Opportunity::new(
-                "Enterprise Renewal".to_string(),
-                domain::OpportunityStage::Proposal,
-                2500000,
-            ))
-            .await;
-    }
+    // ... seeding ...
 
     // 6. Build Router
     let app = Router::new()
         .route("/", get(get_board_handler))
+        .route(
+            "/register",
+            get(infrastructure::web::handlers::get_register_handler)
+                .post(infrastructure::web::handlers::post_register_handler),
+        )
         .route("/cards/:id/move", axum::routing::post(move_card_handler))
         .with_state(app_state);
 

@@ -84,3 +84,22 @@ pub fn kanban_board(opportunities: &[Opportunity]) -> Markup {
         }
     }
 }
+
+pub fn register_form() -> Markup {
+    html! {
+        div class="max-w-md mx-auto mt-10" {
+            form hx-post="/register" hx-target="#result" {
+                h2 class="text-2xl font-bold mb-4" { "Register" }
+
+                label class="block mb-2" { "Email" }
+                input type="email" name="email" class="border p-2 w-full mb-4" required;
+
+                label class="block mb-2" { "Password" }
+                input type="password" name="password" class="border p-2 w-full mb-4" required;
+
+                button type="submit" class="bg-blue-500 text-white p-2 rounded" { "Register" }
+            }
+            div id="result" class="mt-4" {}
+        }
+    }
+}

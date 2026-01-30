@@ -130,3 +130,49 @@ impl OpportunityRepository for SeaOrmRepo {
         Ok(())
     }
 }
+
+#[async_trait]
+impl crate::application::ports::output::UserRepository for SeaOrmRepo {
+    async fn find_by_email(
+        &self,
+        email: &str,
+    ) -> Result<Option<crate::domain::entities::User>, DomainError> {
+        use crate::infrastructure::persistence::entities::user;
+        let model = user::Entity::find()
+            .filter(user::Column::Email.eq(email))
+            .one(&self.db)
+            .await
+            .map_err(|e| DomainError::Validation(e.to_string()))?;
+        Ok(model.map(|m| m.to_domain()))
+    }
+
+    async fn create(
+        &self,
+        user: crate::domain::entities::User,
+    ) -> Result<crate::domain::entities::User, DomainError> {
+        use crate::infrastructure::persistence::entities::user;
+        use sea_orm::{ActiveModelTrait, Set};
+
+        // Convert enum to string manually or via serde
+        let state_str = serde_json::to_value(user.state)
+            .unwrap()
+            .as_str()
+            .unwrap()
+            .to_string();
+
+        let active_model = user::ActiveModel {
+            id: Set(user.id),
+            email: Set(user.email.clone()),
+            password_hash: Set(user.password_hash.clone()),
+            state: Set(state_str),
+            created_at: Set(user.created_at.into()),
+            updated_at: Set(user.updated_at.into()),
+        };
+
+        let result = active_model
+            .insert(&self.db)
+            .await
+            .map_err(|e| DomainError::Validation(e.to_string()))?;
+        Ok(result.to_domain())
+    }
+}

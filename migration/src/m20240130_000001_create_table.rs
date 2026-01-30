@@ -1,10 +1,10 @@
 use sea_orm_migration::prelude::*;
 
 #[derive(DeriveMigrationName)]
-pub struct Migration;
+pub struct InitialSchema;
 
 #[async_trait::async_trait]
-impl MigrationTrait for Migration {
+impl MigrationTrait for InitialSchema {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         // Person Table
         manager
