@@ -21,10 +21,10 @@ pub fn layout(content: Markup) -> Markup {
 
 pub fn board_card(opportunity: &Opportunity) -> Markup {
     let stage_class = match opportunity.stage {
-        OpportunityStage::New => "bg-blue-100 border-l-4 border-blue-500",
-        OpportunityStage::Meeting => "bg-yellow-100 border-l-4 border-yellow-500",
-        OpportunityStage::Proposal => "bg-purple-100 border-l-4 border-purple-500",
-        OpportunityStage::Customer => "bg-green-100 border-l-4 border-green-500",
+        OpportunityStage::Prospecting => "bg-blue-100 border-l-4 border-blue-500",
+        OpportunityStage::Qualification => "bg-yellow-100 border-l-4 border-yellow-500",
+        OpportunityStage::Negotiation => "bg-purple-100 border-l-4 border-purple-500",
+        OpportunityStage::Won => "bg-green-100 border-l-4 border-green-500",
         OpportunityStage::Lost => "bg-red-100 border-l-4 border-red-500",
     };
 
@@ -48,10 +48,10 @@ pub fn board_card(opportunity: &Opportunity) -> Markup {
 
 pub fn kanban_board(opportunities: &[Opportunity]) -> Markup {
     let stages = vec![
-        OpportunityStage::New,
-        OpportunityStage::Meeting,
-        OpportunityStage::Proposal,
-        OpportunityStage::Customer,
+        OpportunityStage::Prospecting,
+        OpportunityStage::Qualification,
+        OpportunityStage::Negotiation,
+        OpportunityStage::Won,
         OpportunityStage::Lost,
     ];
 
@@ -242,6 +242,121 @@ pub fn company_form() -> Markup {
 
                 div class="flex justify-between items-center" {
                      a href="/companies" class="text-gray-500" { "Cancel" }
+                     button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded" { "Save" }
+                }
+            }
+        }
+    }
+}
+
+pub fn opportunity_list(opportunities: &[Opportunity]) -> Markup {
+    html! {
+        div class="max-w-6xl mx-auto mt-10" {
+            div class="flex justify-between items-center mb-6" {
+                 h2 class="text-2xl font-bold" { "Opportunities" }
+                 a href="/opportunities/new" class="bg-blue-500 text-white px-4 py-2 rounded" { "Add Opportunity" }
+            }
+
+            table class="min-w-full bg-white border" {
+                thead {
+                    tr {
+                        th class="p-4 border-b text-left" { "Name" }
+                        th class="p-4 border-b text-left" { "Stage" }
+                        th class="p-4 border-b text-left" { "Amount" }
+                        th class="p-4 border-b text-left" { "Close Date" }
+                        th class="p-4 border-b text-left" { "Actions" }
+                    }
+                }
+                tbody {
+                    @for opportunity in opportunities {
+                        tr class="hover:bg-gray-50" {
+                            td class="p-4 border-b" { (opportunity.name) }
+                            td class="p-4 border-b" {
+                                @let stage_name = match opportunity.stage {
+                                    OpportunityStage::Prospecting => "Prospecting",
+                                    OpportunityStage::Qualification => "Qualification",
+                                    OpportunityStage::Negotiation => "Negotiation",
+                                    OpportunityStage::Won => "Won",
+                                    OpportunityStage::Lost => "Lost",
+                                };
+                                (stage_name)
+                            }
+                            td class="p-4 border-b" {
+                                @if let Some(amount) = opportunity.amount_micros {
+                                    @let currency = opportunity.currency_code.as_deref().unwrap_or("USD");
+                                    (format!("{} {:.2}", currency, amount as f64 / 1_000_000.0))
+                                } @else {
+                                    "-"
+                                }
+                            }
+                            td class="p-4 border-b" {
+                                @if let Some(date) = opportunity.close_date {
+                                    (date.format("%Y-%m-%d").to_string())
+                                } @else {
+                                    "-"
+                                }
+                            }
+                            td class="p-4 border-b" {
+                                button
+                                    hx-delete=(format!("/opportunities/{}", opportunity.id))
+                                    hx-target="closest tr"
+                                    hx-swap="outerHTML"
+                                    class="text-red-500 hover:text-red-700"
+                                { "Delete" }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+pub fn opportunity_form(companies: &[crate::domain::Company], people: &[Person]) -> Markup {
+    html! {
+        div class="max-w-md mx-auto mt-10" {
+            form hx-post="/opportunities" hx-target="body" {
+                h2 class="text-2xl font-bold mb-4" { "Add New Opportunity" }
+
+                label class="block mb-2" { "Name *" }
+                input type="text" name="name" class="border p-2 w-full mb-4" required;
+
+                label class="block mb-2" { "Stage *" }
+                select name="stage" class="border p-2 w-full mb-4" required {
+                    option value="Prospecting" { "Prospecting" }
+                    option value="Qualification" { "Qualification" }
+                    option value="Negotiation" { "Negotiation" }
+                    option value="Won" { "Won" }
+                    option value="Lost" { "Lost" }
+                }
+
+                label class="block mb-2" { "Amount (in dollars)" }
+                input type="number" name="amount_micros" step="0.01" class="border p-2 w-full mb-4" placeholder="0.00";
+
+                label class="block mb-2" { "Currency Code" }
+                input type="text" name="currency_code" value="USD" class="border p-2 w-full mb-4" maxlength="3";
+
+                label class="block mb-2" { "Close Date" }
+                input type="date" name="close_date" class="border p-2 w-full mb-4";
+
+                label class="block mb-2" { "Company" }
+                select name="company_id" class="border p-2 w-full mb-4" {
+                    option value="" { "Select a company..." }
+                    @for company in companies {
+                        option value=(company.id) { (company.name) }
+                    }
+                }
+
+                label class="block mb-2" { "Point of Contact" }
+                select name="point_of_contact_id" class="border p-2 w-full mb-4" {
+                    option value="" { "Select a person..." }
+                    @for person in people {
+                        option value=(person.id) { (format!("{} ({})", person.name, person.email)) }
+                    }
+                }
+
+                div class="flex justify-between items-center" {
+                     a href="/opportunities" class="text-gray-500" { "Cancel" }
                      button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded" { "Save" }
                 }
             }

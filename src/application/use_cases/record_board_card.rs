@@ -29,7 +29,7 @@ impl RecordUseCase for RecordBoardCard {
         // In a real app, we'd check invariants here
 
         self.opportunity_repo
-            .save(&opportunity)
+            .update(opportunity)
             .await
             .map_err(|e| e.to_string())?;
 

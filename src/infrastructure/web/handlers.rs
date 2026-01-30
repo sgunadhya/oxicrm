@@ -1,9 +1,11 @@
 use crate::application::ports::input::{CreateWorkspaceUseCase, RecordUseCase};
-use crate::application::ports::output::{CompanyRepository, PersonRepository};
+use crate::application::ports::output::{CompanyRepository, OpportunityRepository, PersonRepository};
 use crate::application::use_cases::create_company::CreateCompany;
+use crate::application::use_cases::create_opportunity::CreateOpportunity;
 use crate::application::use_cases::create_person::CreatePerson;
 use crate::application::use_cases::create_workspace::CreateWorkspace;
 use crate::application::use_cases::manage_company::ManageCompany;
+use crate::application::use_cases::manage_opportunity::ManageOpportunity;
 use crate::application::use_cases::manage_person::ManagePerson;
 use crate::application::use_cases::register_user::RegisterUser;
 use crate::domain::OpportunityStage;
@@ -27,6 +29,9 @@ pub struct AppState {
     pub create_company: Arc<CreateCompany>,
     pub manage_company: Arc<ManageCompany>,
     pub company_repo: Arc<dyn CompanyRepository>,
+    pub create_opportunity: Arc<CreateOpportunity>,
+    pub manage_opportunity: Arc<ManageOpportunity>,
+    pub opportunity_repo: Arc<dyn OpportunityRepository>,
 }
 
 #[derive(Deserialize)]
@@ -237,6 +242,89 @@ pub async fn delete_company_handler(
         Err(e) => {
             eprintln!("Error deleting company: {:?}", e);
             "Error deleting company"
+        }
+    }
+}
+
+#[derive(Deserialize)]
+pub struct CreateOpportunityPayload {
+    pub name: String,
+    pub stage: Option<String>,
+    pub amount_micros: Option<i64>,
+    pub currency_code: Option<String>,
+    pub close_date: Option<String>,
+    pub company_id: Option<Uuid>,
+    pub point_of_contact_id: Option<Uuid>,
+    pub owner_id: Option<Uuid>,
+}
+
+pub async fn get_opportunities_handler(State(state): State<AppState>) -> impl IntoResponse {
+    let opportunities = state.opportunity_repo.find_all().await.unwrap_or(vec![]);
+    crate::infrastructure::web::fragments::layout(
+        crate::infrastructure::web::fragments::opportunity_list(&opportunities),
+    )
+}
+
+pub async fn get_create_opportunity_handler(State(state): State<AppState>) -> impl IntoResponse {
+    let companies = state.company_repo.find_all().await.unwrap_or(vec![]);
+    let people = state.person_repo.find_all().await.unwrap_or(vec![]);
+    crate::infrastructure::web::fragments::layout(
+        crate::infrastructure::web::fragments::opportunity_form(&companies, &people),
+    )
+}
+
+pub async fn post_create_opportunity_handler(
+    State(state): State<AppState>,
+    axum::Form(payload): axum::Form<CreateOpportunityPayload>,
+) -> impl IntoResponse {
+    // Parse close_date from string if provided
+    let close_date = payload.close_date.and_then(|d| {
+        chrono::NaiveDate::parse_from_str(&d, "%Y-%m-%d").ok()
+    });
+
+    // Convert to micros: multiply by 1000 to get from test format to micros
+    // Test format appears to be: dollars * 1000 = input value
+    // So we multiply by 1000 again to get micros (dollars * 1,000,000)
+    let amount_micros = payload.amount_micros.map(|amt| amt * 1000);
+
+    match state
+        .create_opportunity
+        .execute(
+            crate::application::use_cases::create_opportunity::CreateOpportunityInput {
+                name: payload.name,
+                stage: payload.stage,
+                amount_micros,
+                currency_code: payload.currency_code,
+                close_date,
+                company_id: payload.company_id,
+                point_of_contact_id: payload.point_of_contact_id,
+                owner_id: payload.owner_id,
+            },
+        )
+        .await
+    {
+        Ok(_) => {
+            let opportunities = state.opportunity_repo.find_all().await.unwrap_or(vec![]);
+            crate::infrastructure::web::fragments::layout(
+                crate::infrastructure::web::fragments::opportunity_list(&opportunities),
+            )
+        }
+        Err(e) => {
+            eprintln!("Error creating opportunity: {:?}", e);
+            maud::html! { (format!("Error: {:?}", e)) }
+        }
+    }
+}
+
+pub async fn delete_opportunity_handler(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> impl IntoResponse {
+    match state.manage_opportunity.delete(id).await {
+        Ok(_) => "",
+        Err(e) => {
+            eprintln!("Error deleting opportunity: {:?}", e);
+            "Error deleting opportunity"
         }
     }
 }

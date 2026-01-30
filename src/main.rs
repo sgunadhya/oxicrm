@@ -60,9 +60,11 @@ async fn main() {
     // For now, adhering to the existing struct definition which only required repo.
     // If we want to use them, we'd update RecordBoardCard.
     use application::use_cases::create_company::CreateCompany;
+    use application::use_cases::create_opportunity::CreateOpportunity;
     use application::use_cases::create_person::CreatePerson;
     use application::use_cases::create_workspace::CreateWorkspace;
     use application::use_cases::manage_company::ManageCompany;
+    use application::use_cases::manage_opportunity::ManageOpportunity;
     use application::use_cases::manage_person::ManagePerson;
     use application::use_cases::register_user::RegisterUser;
     // ... imports ...
@@ -79,6 +81,8 @@ async fn main() {
     let manage_person_use_case = Arc::new(ManagePerson::new(repo.clone()));
     let create_company_use_case = Arc::new(CreateCompany::new(repo.clone()));
     let manage_company_use_case = Arc::new(ManageCompany::new(repo.clone()));
+    let create_opportunity_use_case = Arc::new(CreateOpportunity::new(repo.clone()));
+    let manage_opportunity_use_case = Arc::new(ManageOpportunity::new(repo.clone()));
 
     // 5. Initialize App State
     let app_state = AppState {
@@ -91,6 +95,9 @@ async fn main() {
         create_company: create_company_use_case.clone(),
         manage_company: manage_company_use_case.clone(),
         company_repo: repo.clone(),
+        create_opportunity: create_opportunity_use_case.clone(),
+        manage_opportunity: manage_opportunity_use_case.clone(),
+        opportunity_repo: repo.clone(),
     };
 
     // ... seeding ...
@@ -137,6 +144,19 @@ async fn main() {
         .route(
             "/companies/:id",
             axum::routing::delete(infrastructure::web::handlers::delete_company_handler),
+        )
+        .route(
+            "/opportunities",
+            get(infrastructure::web::handlers::get_opportunities_handler)
+                .post(infrastructure::web::handlers::post_create_opportunity_handler),
+        )
+        .route(
+            "/opportunities/new",
+            get(infrastructure::web::handlers::get_create_opportunity_handler),
+        )
+        .route(
+            "/opportunities/:id",
+            axum::routing::delete(infrastructure::web::handlers::delete_opportunity_handler),
         )
         .route("/cards/:id/move", axum::routing::post(move_card_handler))
         .with_state(app_state);

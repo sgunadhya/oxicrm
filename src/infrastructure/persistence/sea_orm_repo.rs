@@ -71,112 +71,94 @@ impl crate::application::ports::output::PersonRepository for SeaOrmRepo {
 
 #[async_trait]
 impl OpportunityRepository for SeaOrmRepo {
+    async fn find_all(&self) -> Result<Vec<Opportunity>, DomainError> {
+        let models = OpportunityEntity::find()
+            .filter(opportunity::Column::DeletedAt.is_null())
+            .all(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+    }
+
     async fn find_by_id(&self, id: Uuid) -> Result<Option<Opportunity>, DomainError> {
         let model = OpportunityEntity::find_by_id(id)
             .one(&self.db)
             .await
-            .map_err(|e| DomainError::Validation(e.to_string()))?;
-
-        match model {
-            Some(m) => {
-                let stage = match m.stage.as_str() {
-                    "New" => OpportunityStage::New,
-                    "Meeting" => OpportunityStage::Meeting,
-                    "Proposal" => OpportunityStage::Proposal,
-                    "Customer" => OpportunityStage::Customer,
-                    "Lost" => OpportunityStage::Lost,
-                    _ => OpportunityStage::New,
-                };
-
-                Ok(Some(Opportunity {
-                    id: m.id,
-                    name: m.name,
-                    stage,
-                    amount_micros: m.amount_micros,
-                    created_at: m.created_at,
-                    updated_at: m.updated_at,
-                    deleted_at: None,
-                    position: 0,
-                    close_date: None,
-                    point_of_contact_id: None,
-                    company_id: None,
-                }))
-            }
-            None => Ok(None),
-        }
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(model.map(|m| m.to_domain()))
     }
 
-    async fn find_all(&self) -> Result<Vec<Opportunity>, DomainError> {
-        let models = OpportunityEntity::find()
-            .all(&self.db)
-            .await
-            .map_err(|e| DomainError::Validation(e.to_string()))?;
-
-        let opportunities = models
-            .into_iter()
-            .map(|m| {
-                let stage = match m.stage.as_str() {
-                    "New" => OpportunityStage::New,
-                    "Meeting" => OpportunityStage::Meeting,
-                    "Proposal" => OpportunityStage::Proposal,
-                    "Customer" => OpportunityStage::Customer,
-                    "Lost" => OpportunityStage::Lost,
-                    _ => OpportunityStage::New,
-                };
-                Opportunity {
-                    id: m.id,
-                    name: m.name,
-                    stage,
-                    amount_micros: m.amount_micros,
-                    created_at: m.created_at,
-                    updated_at: m.updated_at,
-                    deleted_at: None,
-                    position: 0,
-                    close_date: None,
-                    point_of_contact_id: None,
-                    company_id: None,
-                }
-            })
-            .collect();
-
-        Ok(opportunities)
-    }
-
-    async fn save(&self, opportunity: &Opportunity) -> Result<(), DomainError> {
+    async fn create(&self, opportunity: Opportunity) -> Result<Opportunity, DomainError> {
         let stage_str = match opportunity.stage {
-            OpportunityStage::New => "New",
-            OpportunityStage::Meeting => "Meeting",
-            OpportunityStage::Proposal => "Proposal",
-            OpportunityStage::Customer => "Customer",
+            OpportunityStage::Prospecting => "Prospecting",
+            OpportunityStage::Qualification => "Qualification",
+            OpportunityStage::Negotiation => "Negotiation",
+            OpportunityStage::Won => "Won",
             OpportunityStage::Lost => "Lost",
         };
 
-        let active_model = opportunity::ActiveModel {
+        let model = opportunity::ActiveModel {
             id: Set(opportunity.id),
-            name: Set(opportunity.name.clone()),
+            created_at: Set(opportunity.created_at.into()),
+            updated_at: Set(opportunity.updated_at.into()),
+            deleted_at: Set(None),
+            name: Set(opportunity.name),
             stage: Set(stage_str.to_string()),
             amount_micros: Set(opportunity.amount_micros),
-            created_at: Set(opportunity.created_at),
-            updated_at: Set(opportunity.updated_at),
+            currency_code: Set(opportunity.currency_code),
+            close_date: Set(opportunity.close_date.map(|d| d.into())),
+            company_id: Set(opportunity.company_id),
+            point_of_contact_id: Set(opportunity.point_of_contact_id),
+            owner_id: Set(opportunity.owner_id),
         };
 
-        let exists = OpportunityEntity::find_by_id(opportunity.id)
-            .one(&self.db)
+        let result = model
+            .insert(&self.db)
             .await
-            .map_err(|e| DomainError::Validation(e.to_string()))?;
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(result.to_domain())
+    }
 
-        if exists.is_some() {
-            active_model
-                .update(&self.db)
-                .await
-                .map_err(|e| DomainError::Validation(e.to_string()))?;
-        } else {
-            active_model
-                .insert(&self.db)
-                .await
-                .map_err(|e| DomainError::Validation(e.to_string()))?;
-        }
+    async fn update(&self, opportunity: Opportunity) -> Result<Opportunity, DomainError> {
+        let stage_str = match opportunity.stage {
+            OpportunityStage::Prospecting => "Prospecting",
+            OpportunityStage::Qualification => "Qualification",
+            OpportunityStage::Negotiation => "Negotiation",
+            OpportunityStage::Won => "Won",
+            OpportunityStage::Lost => "Lost",
+        };
 
+        let model = opportunity::ActiveModel {
+            id: Set(opportunity.id),
+            updated_at: Set(chrono::Utc::now().into()),
+            name: Set(opportunity.name),
+            stage: Set(stage_str.to_string()),
+            amount_micros: Set(opportunity.amount_micros),
+            currency_code: Set(opportunity.currency_code),
+            close_date: Set(opportunity.close_date.map(|d| d.into())),
+            company_id: Set(opportunity.company_id),
+            point_of_contact_id: Set(opportunity.point_of_contact_id),
+            owner_id: Set(opportunity.owner_id),
+            ..Default::default()
+        };
+
+        let result = model
+            .update(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(result.to_domain())
+    }
+
+    async fn delete(&self, id: Uuid) -> Result<(), DomainError> {
+        let model = opportunity::ActiveModel {
+            id: Set(id),
+            deleted_at: Set(Some(chrono::Utc::now().into())),
+            ..Default::default()
+        };
+        model
+            .update(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
         Ok(())
     }
 }

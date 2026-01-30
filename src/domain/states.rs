@@ -17,10 +17,10 @@ pub enum TaskStatus {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum OpportunityStage {
-    New,
-    Meeting,
-    Proposal,
-    Customer,
+    Prospecting,
+    Qualification,
+    Negotiation,
+    Won,
     Lost,
 }
 
@@ -47,6 +47,6 @@ impl Default for TaskStatus {
 
 impl Default for OpportunityStage {
     fn default() -> Self {
-        Self::New
+        Self::Prospecting
     }
 }

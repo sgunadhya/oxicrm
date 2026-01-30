@@ -41,8 +41,17 @@ impl MigrationTrait for InitialSchema {
                             .primary_key(),
                     )
                     .col(ColumnDef::new(Opportunity::Name).string().not_null())
-                    .col(ColumnDef::new(Opportunity::Stage).string().not_null()) // Enum stored as string
+                    .col(ColumnDef::new(Opportunity::Stage).string().not_null())
                     .col(ColumnDef::new(Opportunity::AmountMicros).big_integer())
+                    .col(
+                        ColumnDef::new(Opportunity::CurrencyCode)
+                            .string()
+                            .default("USD"),
+                    )
+                    .col(ColumnDef::new(Opportunity::CloseDate).date())
+                    .col(ColumnDef::new(Opportunity::CompanyId).uuid())
+                    .col(ColumnDef::new(Opportunity::PointOfContactId).uuid())
+                    .col(ColumnDef::new(Opportunity::OwnerId).uuid())
                     .col(
                         ColumnDef::new(Opportunity::CreatedAt)
                             .timestamp_with_time_zone()
@@ -53,6 +62,7 @@ impl MigrationTrait for InitialSchema {
                             .timestamp_with_time_zone()
                             .not_null(),
                     )
+                    .col(ColumnDef::new(Opportunity::DeletedAt).timestamp_with_time_zone())
                     .to_owned(),
             )
             .await
@@ -84,6 +94,12 @@ enum Opportunity {
     Name,
     Stage,
     AmountMicros,
+    CurrencyCode,
+    CloseDate,
+    CompanyId,
+    PointOfContactId,
+    OwnerId,
     CreatedAt,
     UpdatedAt,
+    DeletedAt,
 }

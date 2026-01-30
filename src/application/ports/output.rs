@@ -11,9 +11,11 @@ pub trait PersonRepository: Send + Sync {
 
 #[async_trait]
 pub trait OpportunityRepository: Send + Sync {
-    async fn save(&self, opportunity: &Opportunity) -> Result<(), DomainError>;
     async fn find_all(&self) -> Result<Vec<Opportunity>, DomainError>;
     async fn find_by_id(&self, id: uuid::Uuid) -> Result<Option<Opportunity>, DomainError>;
+    async fn create(&self, opportunity: Opportunity) -> Result<Opportunity, DomainError>;
+    async fn update(&self, opportunity: Opportunity) -> Result<Opportunity, DomainError>;
+    async fn delete(&self, id: uuid::Uuid) -> Result<(), DomainError>;
 }
 
 #[async_trait]

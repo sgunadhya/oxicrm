@@ -68,9 +68,11 @@ pub struct Opportunity {
     pub stage: OpportunityStage,
     pub close_date: Option<chrono::NaiveDate>,
     pub amount_micros: Option<i64>,
+    pub currency_code: Option<String>,
     pub position: i32,
     pub point_of_contact_id: Option<Uuid>,
     pub company_id: Option<Uuid>,
+    pub owner_id: Option<Uuid>,
 }
 
 impl Opportunity {
@@ -80,9 +82,11 @@ impl Opportunity {
             name,
             stage,
             amount_micros: Some(amount),
+            currency_code: Some("USD".to_string()),
             close_date: None,
             point_of_contact_id: None,
             company_id: None,
+            owner_id: None,
             position: 0,
             created_at: Utc::now(),
             updated_at: Utc::now(),
