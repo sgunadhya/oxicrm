@@ -143,10 +143,138 @@ impl MigrationTrait for InitialSchema {
                     )
                     .to_owned(),
             )
+            .await?;
+
+        // Workflow Table
+        manager
+            .create_table(
+                Table::create()
+                    .table(Workflow::Table)
+                    .if_not_exists()
+                    .col(ColumnDef::new(Workflow::Id).uuid().not_null().primary_key())
+                    .col(ColumnDef::new(Workflow::Name).string().not_null())
+                    .col(ColumnDef::new(Workflow::LastPublishedVersionId).uuid())
+                    .col(
+                        ColumnDef::new(Workflow::CreatedAt)
+                            .timestamp_with_time_zone()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(Workflow::UpdatedAt)
+                            .timestamp_with_time_zone()
+                            .not_null(),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+
+        // WorkflowVersion Table
+        manager
+            .create_table(
+                Table::create()
+                    .table(WorkflowVersion::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new(WorkflowVersion::Id)
+                            .uuid()
+                            .not_null()
+                            .primary_key(),
+                    )
+                    .col(ColumnDef::new(WorkflowVersion::WorkflowId).uuid().not_null())
+                    .col(
+                        ColumnDef::new(WorkflowVersion::Status)
+                            .string()
+                            .not_null()
+                            .default("DRAFT"),
+                    )
+                    .col(
+                        ColumnDef::new(WorkflowVersion::CreatedAt)
+                            .timestamp_with_time_zone()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(WorkflowVersion::UpdatedAt)
+                            .timestamp_with_time_zone()
+                            .not_null(),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+
+        // WorkflowVersionStep Table
+        manager
+            .create_table(
+                Table::create()
+                    .table(WorkflowVersionStep::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new(WorkflowVersionStep::Id)
+                            .uuid()
+                            .not_null()
+                            .primary_key(),
+                    )
+                    .col(ColumnDef::new(WorkflowVersionStep::WorkflowVersionId).uuid().not_null())
+                    .col(ColumnDef::new(WorkflowVersionStep::Type).string().not_null())
+                    .col(ColumnDef::new(WorkflowVersionStep::Settings).json())
+                    .col(ColumnDef::new(WorkflowVersionStep::Position).integer().not_null().default(0))
+                    .col(
+                        ColumnDef::new(WorkflowVersionStep::CreatedAt)
+                            .timestamp_with_time_zone()
+                            .not_null(),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+
+        // WorkflowRun Table
+        manager
+            .create_table(
+                Table::create()
+                    .table(WorkflowRun::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new(WorkflowRun::Id)
+                            .uuid()
+                            .not_null()
+                            .primary_key(),
+                    )
+                    .col(ColumnDef::new(WorkflowRun::WorkflowVersionId).uuid().not_null())
+                    .col(
+                        ColumnDef::new(WorkflowRun::Status)
+                            .string()
+                            .not_null()
+                            .default("RUNNING"),
+                    )
+                    .col(ColumnDef::new(WorkflowRun::Output).json())
+                    .col(ColumnDef::new(WorkflowRun::Error).text())
+                    .col(
+                        ColumnDef::new(WorkflowRun::CreatedAt)
+                            .timestamp_with_time_zone()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(WorkflowRun::UpdatedAt)
+                            .timestamp_with_time_zone()
+                            .not_null(),
+                    )
+                    .to_owned(),
+            )
             .await
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        manager
+            .drop_table(Table::drop().table(WorkflowRun::Table).to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(WorkflowVersionStep::Table).to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(WorkflowVersion::Table).to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(Workflow::Table).to_owned())
+            .await?;
         manager
             .drop_table(Table::drop().table(TaskTarget::Table).to_owned())
             .await?;
@@ -227,4 +355,47 @@ enum TaskTarget {
     CompanyId,
     OpportunityId,
     CreatedAt,
+}
+
+#[derive(Iden)]
+enum Workflow {
+    Table,
+    Id,
+    Name,
+    LastPublishedVersionId,
+    CreatedAt,
+    UpdatedAt,
+}
+
+#[derive(Iden)]
+enum WorkflowVersion {
+    Table,
+    Id,
+    WorkflowId,
+    Status,
+    CreatedAt,
+    UpdatedAt,
+}
+
+#[derive(Iden)]
+enum WorkflowVersionStep {
+    Table,
+    Id,
+    WorkflowVersionId,
+    Type,
+    Settings,
+    Position,
+    CreatedAt,
+}
+
+#[derive(Iden)]
+enum WorkflowRun {
+    Table,
+    Id,
+    WorkflowVersionId,
+    Status,
+    Output,
+    Error,
+    CreatedAt,
+    UpdatedAt,
 }

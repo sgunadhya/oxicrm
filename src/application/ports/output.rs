@@ -1,4 +1,4 @@
-use crate::domain::{Company, DomainError, Note, Opportunity, Person, Task, TaskTarget, User, Workspace, WorkspaceMember};
+use crate::domain::{Company, DomainError, Note, Opportunity, Person, Task, TaskTarget, User, Workflow, WorkflowVersion, WorkflowVersionStep, WorkflowRun, Workspace, WorkspaceMember};
 use async_trait::async_trait;
 
 #[async_trait]
@@ -63,4 +63,37 @@ pub trait TaskTargetRepository: Send + Sync {
     async fn find_by_task_id(&self, task_id: uuid::Uuid) -> Result<Vec<TaskTarget>, DomainError>;
     async fn create(&self, task_target: TaskTarget) -> Result<TaskTarget, DomainError>;
     async fn delete(&self, id: uuid::Uuid) -> Result<(), DomainError>;
+}
+
+#[async_trait]
+pub trait WorkflowRepository: Send + Sync {
+    async fn find_all(&self) -> Result<Vec<Workflow>, DomainError>;
+    async fn find_by_id(&self, id: uuid::Uuid) -> Result<Option<Workflow>, DomainError>;
+    async fn create(&self, workflow: Workflow) -> Result<Workflow, DomainError>;
+    async fn update(&self, workflow: Workflow) -> Result<Workflow, DomainError>;
+    async fn delete(&self, id: uuid::Uuid) -> Result<(), DomainError>;
+}
+
+#[async_trait]
+pub trait WorkflowVersionRepository: Send + Sync {
+    async fn find_all(&self) -> Result<Vec<WorkflowVersion>, DomainError>;
+    async fn find_by_id(&self, id: uuid::Uuid) -> Result<Option<WorkflowVersion>, DomainError>;
+    async fn find_by_workflow_id(&self, workflow_id: uuid::Uuid) -> Result<Vec<WorkflowVersion>, DomainError>;
+    async fn create(&self, version: WorkflowVersion) -> Result<WorkflowVersion, DomainError>;
+    async fn update(&self, version: WorkflowVersion) -> Result<WorkflowVersion, DomainError>;
+}
+
+#[async_trait]
+pub trait WorkflowVersionStepRepository: Send + Sync {
+    async fn find_by_version_id(&self, version_id: uuid::Uuid) -> Result<Vec<WorkflowVersionStep>, DomainError>;
+    async fn create(&self, step: WorkflowVersionStep) -> Result<WorkflowVersionStep, DomainError>;
+    async fn delete(&self, id: uuid::Uuid) -> Result<(), DomainError>;
+}
+
+#[async_trait]
+pub trait WorkflowRunRepository: Send + Sync {
+    async fn find_all(&self) -> Result<Vec<WorkflowRun>, DomainError>;
+    async fn find_by_id(&self, id: uuid::Uuid) -> Result<Option<WorkflowRun>, DomainError>;
+    async fn create(&self, run: WorkflowRun) -> Result<WorkflowRun, DomainError>;
+    async fn update(&self, run: WorkflowRun) -> Result<WorkflowRun, DomainError>;
 }

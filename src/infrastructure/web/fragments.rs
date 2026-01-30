@@ -504,3 +504,57 @@ pub fn note_form() -> Markup {
         }
     }
 }
+
+pub fn workflow_list(workflows: &[crate::domain::Workflow]) -> Markup {
+    html! {
+        div class="p-8" {
+            div class="flex justify-between items-center mb-4" {
+                h2 class="text-2xl font-bold" { "Workflows" }
+                a href="/workflows/new" class="bg-blue-500 text-white px-4 py-2 rounded" { "Add Workflow" }
+            }
+            table class="min-w-full bg-white border" {
+                thead {
+                    tr {
+                        th class="p-4 border-b text-left" { "Name" }
+                        th class="p-4 border-b text-left" { "Created" }
+                        th class="p-4 border-b text-left" { "Actions" }
+                    }
+                }
+                tbody {
+                    @for workflow in workflows {
+                        tr class="hover:bg-gray-50" {
+                            td class="p-4 border-b" { (workflow.name) }
+                            td class="p-4 border-b" { (workflow.created_at.format("%Y-%m-%d %H:%M").to_string()) }
+                            td class="p-4 border-b" {
+                                button
+                                    hx-delete=(format!("/workflows/{}", workflow.id))
+                                    hx-target="closest tr"
+                                    hx-swap="outerHTML"
+                                    class="text-red-500 hover:text-red-700"
+                                { "Delete" }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+pub fn workflow_form() -> Markup {
+    html! {
+        div class="max-w-md mx-auto mt-10" {
+            form hx-post="/workflows" hx-target="body" {
+                h2 class="text-2xl font-bold mb-4" { "Add New Workflow" }
+
+                label class="block mb-2" { "Name *" }
+                input type="text" name="name" class="border p-2 w-full mb-4" required;
+
+                div class="flex justify-between items-center" {
+                     a href="/workflows" class="text-gray-500" { "Cancel" }
+                     button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded" { "Save" }
+                }
+            }
+        }
+    }
+}

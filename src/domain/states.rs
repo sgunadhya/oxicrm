@@ -50,3 +50,36 @@ impl Default for OpportunityStage {
         Self::Prospecting
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum WorkflowVersionStatus {
+    Draft,
+    Active,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum WorkflowRunStatus {
+    Running,
+    Completed,
+    Failed,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum WorkflowStepType {
+    CreateRecord,
+    SendEmail,
+    IfElse,
+    Form,
+}
+
+impl Default for WorkflowVersionStatus {
+    fn default() -> Self {
+        Self::Draft
+    }
+}
+
+impl Default for WorkflowRunStatus {
+    fn default() -> Self {
+        Self::Running
+    }
+}

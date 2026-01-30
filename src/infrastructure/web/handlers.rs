@@ -1,16 +1,18 @@
 use crate::application::ports::input::{CreateWorkspaceUseCase, RecordUseCase};
-use crate::application::ports::output::{CompanyRepository, NoteRepository, OpportunityRepository, PersonRepository, TaskRepository};
+use crate::application::ports::output::{CompanyRepository, NoteRepository, OpportunityRepository, PersonRepository, TaskRepository, WorkflowRepository};
 use crate::application::use_cases::create_company::CreateCompany;
 use crate::application::use_cases::create_note::CreateNote;
 use crate::application::use_cases::create_opportunity::CreateOpportunity;
 use crate::application::use_cases::create_person::CreatePerson;
 use crate::application::use_cases::create_task::CreateTask;
+use crate::application::use_cases::create_workflow::CreateWorkflow;
 use crate::application::use_cases::create_workspace::CreateWorkspace;
 use crate::application::use_cases::manage_company::ManageCompany;
 use crate::application::use_cases::manage_note::ManageNote;
 use crate::application::use_cases::manage_opportunity::ManageOpportunity;
 use crate::application::use_cases::manage_person::ManagePerson;
 use crate::application::use_cases::manage_task::ManageTask;
+use crate::application::use_cases::manage_workflow::ManageWorkflow;
 use crate::application::use_cases::register_user::RegisterUser;
 use crate::domain::OpportunityStage;
 use axum::{
@@ -42,6 +44,9 @@ pub struct AppState {
     pub create_note: Arc<CreateNote>,
     pub manage_note: Arc<ManageNote>,
     pub note_repo: Arc<dyn NoteRepository>,
+    pub create_workflow: Arc<CreateWorkflow>,
+    pub manage_workflow: Arc<ManageWorkflow>,
+    pub workflow_repo: Arc<dyn WorkflowRepository>,
 }
 
 #[derive(Deserialize)]
@@ -468,6 +473,62 @@ pub async fn delete_note_handler(
         Err(e) => {
             eprintln!("Error deleting note: {:?}", e);
             "Error deleting note"
+        }
+    }
+}
+
+// Workflow handlers
+#[derive(Deserialize)]
+pub struct CreateWorkflowPayload {
+    pub name: String,
+}
+
+pub async fn get_workflows_handler(State(state): State<AppState>) -> impl IntoResponse {
+    let workflows = state.workflow_repo.find_all().await.unwrap_or(vec![]);
+    crate::infrastructure::web::fragments::layout(
+        crate::infrastructure::web::fragments::workflow_list(&workflows),
+    )
+}
+
+pub async fn get_create_workflow_handler() -> impl IntoResponse {
+    crate::infrastructure::web::fragments::layout(
+        crate::infrastructure::web::fragments::workflow_form(),
+    )
+}
+
+pub async fn post_create_workflow_handler(
+    State(state): State<AppState>,
+    axum::Form(payload): axum::Form<CreateWorkflowPayload>,
+) -> impl IntoResponse {
+    match state
+        .create_workflow
+        .execute(crate::application::use_cases::create_workflow::CreateWorkflowInput {
+            name: payload.name,
+        })
+        .await
+    {
+        Ok(_) => {
+            let workflows = state.workflow_repo.find_all().await.unwrap_or(vec![]);
+            crate::infrastructure::web::fragments::layout(
+                crate::infrastructure::web::fragments::workflow_list(&workflows),
+            )
+        }
+        Err(e) => {
+            eprintln!("Error creating workflow: {:?}", e);
+            maud::html! { (format!("Error: {:?}", e)) }
+        }
+    }
+}
+
+pub async fn delete_workflow_handler(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> impl IntoResponse {
+    match state.manage_workflow.delete(id).await {
+        Ok(_) => "",
+        Err(e) => {
+            eprintln!("Error deleting workflow: {:?}", e);
+            "Error deleting workflow"
         }
     }
 }

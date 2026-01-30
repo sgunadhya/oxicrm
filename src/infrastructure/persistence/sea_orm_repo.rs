@@ -1,9 +1,9 @@
 use super::entities::opportunity::{self, Entity as OpportunityEntity};
 use crate::application::ports::output::{
-    NoteRepository, OpportunityRepository, TaskRepository, TaskTargetRepository, UserRepository, WorkspaceRepository,
+    NoteRepository, OpportunityRepository, TaskRepository, TaskTargetRepository, UserRepository, WorkflowRepository, WorkspaceRepository,
 };
 use crate::domain::{
-    DomainError, Note, Opportunity, OpportunityStage, Person, Task, TaskTarget, User, Workspace, WorkspaceMember,
+    DomainError, Note, Opportunity, OpportunityStage, Person, Task, TaskTarget, User, Workflow, Workspace, WorkspaceMember,
 };
 use crate::infrastructure::persistence::entities::{person, user, workspace, workspace_member};
 use async_trait::async_trait;
@@ -530,6 +530,70 @@ impl crate::application::ports::output::TaskTargetRepository for SeaOrmRepo {
     async fn delete(&self, id: Uuid) -> Result<(), DomainError> {
         use crate::infrastructure::persistence::entities::task_target;
         task_target::Entity::delete_by_id(id)
+            .exec(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl WorkflowRepository for SeaOrmRepo {
+    async fn find_all(&self) -> Result<Vec<Workflow>, DomainError> {
+        use crate::infrastructure::persistence::entities::workflow;
+        let models = workflow::Entity::find()
+            .all(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+    }
+
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<Workflow>, DomainError> {
+        use crate::infrastructure::persistence::entities::workflow;
+        let model = workflow::Entity::find_by_id(id)
+            .one(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(model.map(|m| m.to_domain()))
+    }
+
+    async fn create(&self, workflow: Workflow) -> Result<Workflow, DomainError> {
+        use crate::infrastructure::persistence::entities::workflow;
+        let model = workflow::ActiveModel {
+            id: Set(workflow.id),
+            name: Set(workflow.name),
+            last_published_version_id: Set(workflow.last_published_version_id),
+            created_at: Set(workflow.created_at.into()),
+            updated_at: Set(workflow.updated_at.into()),
+        };
+
+        let result = model
+            .insert(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(result.to_domain())
+    }
+
+    async fn update(&self, workflow: Workflow) -> Result<Workflow, DomainError> {
+        use crate::infrastructure::persistence::entities::workflow;
+        let model = workflow::ActiveModel {
+            id: Set(workflow.id),
+            name: Set(workflow.name),
+            last_published_version_id: Set(workflow.last_published_version_id),
+            updated_at: Set(workflow.updated_at.into()),
+            ..Default::default()
+        };
+
+        let result = model
+            .update(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(result.to_domain())
+    }
+
+    async fn delete(&self, id: Uuid) -> Result<(), DomainError> {
+        use crate::infrastructure::persistence::entities::workflow;
+        workflow::Entity::delete_by_id(id)
             .exec(&self.db)
             .await
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;

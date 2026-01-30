@@ -64,12 +64,14 @@ async fn main() {
     use application::use_cases::create_opportunity::CreateOpportunity;
     use application::use_cases::create_person::CreatePerson;
     use application::use_cases::create_task::CreateTask;
+    use application::use_cases::create_workflow::CreateWorkflow;
     use application::use_cases::create_workspace::CreateWorkspace;
     use application::use_cases::manage_company::ManageCompany;
     use application::use_cases::manage_note::ManageNote;
     use application::use_cases::manage_opportunity::ManageOpportunity;
     use application::use_cases::manage_person::ManagePerson;
     use application::use_cases::manage_task::ManageTask;
+    use application::use_cases::manage_workflow::ManageWorkflow;
     use application::use_cases::register_user::RegisterUser;
     // ... imports ...
 
@@ -91,6 +93,8 @@ async fn main() {
     let manage_task_use_case = Arc::new(ManageTask::new(repo.clone()));
     let create_note_use_case = Arc::new(CreateNote::new(repo.clone()));
     let manage_note_use_case = Arc::new(ManageNote::new(repo.clone()));
+    let create_workflow_use_case = Arc::new(CreateWorkflow::new(repo.clone()));
+    let manage_workflow_use_case = Arc::new(ManageWorkflow::new(repo.clone()));
 
     // 5. Initialize App State
     let app_state = AppState {
@@ -112,6 +116,9 @@ async fn main() {
         create_note: create_note_use_case.clone(),
         manage_note: manage_note_use_case.clone(),
         note_repo: repo.clone(),
+        create_workflow: create_workflow_use_case.clone(),
+        manage_workflow: manage_workflow_use_case.clone(),
+        workflow_repo: repo.clone(),
     };
 
     // ... seeding ...
@@ -197,6 +204,19 @@ async fn main() {
         .route(
             "/notes/:id",
             axum::routing::delete(infrastructure::web::handlers::delete_note_handler),
+        )
+        .route(
+            "/workflows",
+            get(infrastructure::web::handlers::get_workflows_handler)
+                .post(infrastructure::web::handlers::post_create_workflow_handler),
+        )
+        .route(
+            "/workflows/new",
+            get(infrastructure::web::handlers::get_create_workflow_handler),
+        )
+        .route(
+            "/workflows/:id",
+            axum::routing::delete(infrastructure::web::handlers::delete_workflow_handler),
         )
         .route("/cards/:id/move", axum::routing::post(move_card_handler))
         .with_state(app_state);

@@ -1,4 +1,4 @@
-use super::states::{OpportunityStage, TaskStatus, UserState, WorkspaceState};
+use super::states::{OpportunityStage, TaskStatus, UserState, WorkspaceState, WorkflowVersionStatus, WorkflowRunStatus, WorkflowStepType};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -128,4 +128,43 @@ pub struct TaskTarget {
     pub person_id: Option<Uuid>,
     pub company_id: Option<Uuid>,
     pub opportunity_id: Option<Uuid>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Workflow {
+    pub id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub name: String,
+    pub last_published_version_id: Option<Uuid>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkflowVersion {
+    pub id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub workflow_id: Uuid,
+    pub status: WorkflowVersionStatus,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkflowVersionStep {
+    pub id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub workflow_version_id: Uuid,
+    pub step_type: WorkflowStepType,
+    pub settings: serde_json::Value,
+    pub position: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkflowRun {
+    pub id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub workflow_version_id: Uuid,
+    pub status: WorkflowRunStatus,
+    pub output: Option<serde_json::Value>,
+    pub error: Option<String>,
 }
