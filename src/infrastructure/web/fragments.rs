@@ -558,3 +558,69 @@ pub fn workflow_form() -> Markup {
         }
     }
 }
+
+pub fn calendar_event_list(events: &[crate::domain::CalendarEvent]) -> Markup {
+    html! {
+        div class="max-w-6xl mx-auto mt-10" {
+            div class="flex justify-between items-center mb-6" {
+                 h2 class="text-2xl font-bold" { "Calendar Events" }
+                 a href="/calendar-events/new" class="bg-blue-500 text-white px-4 py-2 rounded" { "Add Event" }
+            }
+
+            table class="min-w-full bg-white border" {
+                thead {
+                    tr {
+                        th class="p-4 border-b text-left" { "Title" }
+                        th class="p-4 border-b text-left" { "Start Time" }
+                        th class="p-4 border-b text-left" { "End Time" }
+                        th class="p-4 border-b text-left" { "Actions" }
+                    }
+                }
+                tbody {
+                    @for event in events {
+                        tr class="hover:bg-gray-50" {
+                            td class="p-4 border-b" { (event.title) }
+                            td class="p-4 border-b" { (event.start_time.format("%Y-%m-%d %H:%M").to_string()) }
+                            td class="p-4 border-b" { (event.end_time.format("%Y-%m-%d %H:%M").to_string()) }
+                            td class="p-4 border-b" {
+                                button
+                                    hx-delete=(format!("/calendar-events/{}", event.id))
+                                    hx-target="closest tr"
+                                    hx-swap="outerHTML"
+                                    class="text-red-500 hover:text-red-700"
+                                { "Delete" }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+pub fn calendar_event_form() -> Markup {
+    html! {
+        div class="max-w-md mx-auto mt-10" {
+            form hx-post="/calendar-events" hx-target="body" {
+                h2 class="text-2xl font-bold mb-4" { "Add New Calendar Event" }
+
+                label class="block mb-2" { "Title *" }
+                input type="text" name="title" class="border p-2 w-full mb-4" required;
+
+                label class="block mb-2" { "Start Time *" }
+                input type="datetime-local" name="start_time" class="border p-2 w-full mb-4" required;
+
+                label class="block mb-2" { "End Time *" }
+                input type="datetime-local" name="end_time" class="border p-2 w-full mb-4" required;
+
+                label class="block mb-2" { "Description" }
+                textarea name="description" class="border p-2 w-full mb-4" rows="3" {};
+
+                div class="flex justify-between items-center" {
+                     a href="/calendar-events" class="text-gray-500" { "Cancel" }
+                     button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded" { "Save" }
+                }
+            }
+        }
+    }
+}

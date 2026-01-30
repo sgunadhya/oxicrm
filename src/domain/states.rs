@@ -83,3 +83,15 @@ impl Default for WorkflowRunStatus {
         Self::Running
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ConnectedAccountStatus {
+    Connected,
+    Failed,
+}
+
+impl Default for ConnectedAccountStatus {
+    fn default() -> Self {
+        Self::Connected
+    }
+}

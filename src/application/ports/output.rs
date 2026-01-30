@@ -1,4 +1,4 @@
-use crate::domain::{Company, DomainError, Note, Opportunity, Person, Task, TaskTarget, User, Workflow, WorkflowVersion, WorkflowVersionStep, WorkflowRun, Workspace, WorkspaceMember};
+use crate::domain::{CalendarEvent, CalendarEventParticipant, Company, ConnectedAccount, DomainError, Note, Opportunity, Person, Task, TaskTarget, User, Workflow, WorkflowVersion, WorkflowVersionStep, WorkflowRun, Workspace, WorkspaceMember};
 use async_trait::async_trait;
 
 #[async_trait]
@@ -96,4 +96,29 @@ pub trait WorkflowRunRepository: Send + Sync {
     async fn find_by_id(&self, id: uuid::Uuid) -> Result<Option<WorkflowRun>, DomainError>;
     async fn create(&self, run: WorkflowRun) -> Result<WorkflowRun, DomainError>;
     async fn update(&self, run: WorkflowRun) -> Result<WorkflowRun, DomainError>;
+}
+
+#[async_trait]
+pub trait ConnectedAccountRepository: Send + Sync {
+    async fn find_all(&self) -> Result<Vec<ConnectedAccount>, DomainError>;
+    async fn find_by_id(&self, id: uuid::Uuid) -> Result<Option<ConnectedAccount>, DomainError>;
+    async fn create(&self, account: ConnectedAccount) -> Result<ConnectedAccount, DomainError>;
+    async fn update(&self, account: ConnectedAccount) -> Result<ConnectedAccount, DomainError>;
+    async fn delete(&self, id: uuid::Uuid) -> Result<(), DomainError>;
+}
+
+#[async_trait]
+pub trait CalendarEventRepository: Send + Sync {
+    async fn find_all(&self) -> Result<Vec<CalendarEvent>, DomainError>;
+    async fn find_by_id(&self, id: uuid::Uuid) -> Result<Option<CalendarEvent>, DomainError>;
+    async fn create(&self, event: CalendarEvent) -> Result<CalendarEvent, DomainError>;
+    async fn update(&self, event: CalendarEvent) -> Result<CalendarEvent, DomainError>;
+    async fn delete(&self, id: uuid::Uuid) -> Result<(), DomainError>;
+}
+
+#[async_trait]
+pub trait CalendarEventParticipantRepository: Send + Sync {
+    async fn find_by_event_id(&self, event_id: uuid::Uuid) -> Result<Vec<CalendarEventParticipant>, DomainError>;
+    async fn create(&self, participant: CalendarEventParticipant) -> Result<CalendarEventParticipant, DomainError>;
+    async fn delete(&self, id: uuid::Uuid) -> Result<(), DomainError>;
 }

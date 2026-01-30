@@ -1,9 +1,9 @@
 use super::entities::opportunity::{self, Entity as OpportunityEntity};
 use crate::application::ports::output::{
-    NoteRepository, OpportunityRepository, TaskRepository, TaskTargetRepository, UserRepository, WorkflowRepository, WorkspaceRepository,
+    CalendarEventRepository, NoteRepository, OpportunityRepository, TaskRepository, TaskTargetRepository, UserRepository, WorkflowRepository, WorkspaceRepository,
 };
 use crate::domain::{
-    DomainError, Note, Opportunity, OpportunityStage, Person, Task, TaskTarget, User, Workflow, Workspace, WorkspaceMember,
+    CalendarEvent, DomainError, Note, Opportunity, OpportunityStage, Person, Task, TaskTarget, User, Workflow, Workspace, WorkspaceMember,
 };
 use crate::infrastructure::persistence::entities::{person, user, workspace, workspace_member};
 use async_trait::async_trait;
@@ -594,6 +594,76 @@ impl WorkflowRepository for SeaOrmRepo {
     async fn delete(&self, id: Uuid) -> Result<(), DomainError> {
         use crate::infrastructure::persistence::entities::workflow;
         workflow::Entity::delete_by_id(id)
+            .exec(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl CalendarEventRepository for SeaOrmRepo {
+    async fn find_all(&self) -> Result<Vec<CalendarEvent>, DomainError> {
+        use crate::infrastructure::persistence::entities::calendar_event;
+        let models = calendar_event::Entity::find()
+            .all(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+    }
+
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<CalendarEvent>, DomainError> {
+        use crate::infrastructure::persistence::entities::calendar_event;
+        let model = calendar_event::Entity::find_by_id(id)
+            .one(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(model.map(|m| m.to_domain()))
+    }
+
+    async fn create(&self, event: CalendarEvent) -> Result<CalendarEvent, DomainError> {
+        use crate::infrastructure::persistence::entities::calendar_event;
+        let model = calendar_event::ActiveModel {
+            id: Set(event.id),
+            connected_account_id: Set(event.connected_account_id),
+            title: Set(event.title),
+            start_time: Set(event.start_time.into()),
+            end_time: Set(event.end_time.into()),
+            description: Set(event.description),
+            created_at: Set(event.created_at.into()),
+            updated_at: Set(event.updated_at.into()),
+        };
+
+        let result = model
+            .insert(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(result.to_domain())
+    }
+
+    async fn update(&self, event: CalendarEvent) -> Result<CalendarEvent, DomainError> {
+        use crate::infrastructure::persistence::entities::calendar_event;
+        let model = calendar_event::ActiveModel {
+            id: Set(event.id),
+            connected_account_id: Set(event.connected_account_id),
+            title: Set(event.title),
+            start_time: Set(event.start_time.into()),
+            end_time: Set(event.end_time.into()),
+            description: Set(event.description),
+            updated_at: Set(event.updated_at.into()),
+            ..Default::default()
+        };
+
+        let result = model
+            .update(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(result.to_domain())
+    }
+
+    async fn delete(&self, id: Uuid) -> Result<(), DomainError> {
+        use crate::infrastructure::persistence::entities::calendar_event;
+        calendar_event::Entity::delete_by_id(id)
             .exec(&self.db)
             .await
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;

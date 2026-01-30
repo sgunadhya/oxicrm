@@ -1,10 +1,11 @@
 use crate::application::ports::input::{CreateWorkspaceUseCase, RecordUseCase};
-use crate::application::ports::output::{CompanyRepository, NoteRepository, OpportunityRepository, PersonRepository, TaskRepository, WorkflowRepository};
+use crate::application::ports::output::{CalendarEventRepository, CompanyRepository, NoteRepository, OpportunityRepository, PersonRepository, TaskRepository, WorkflowRepository};
 use crate::application::use_cases::create_company::CreateCompany;
 use crate::application::use_cases::create_note::CreateNote;
 use crate::application::use_cases::create_opportunity::CreateOpportunity;
 use crate::application::use_cases::create_person::CreatePerson;
 use crate::application::use_cases::create_task::CreateTask;
+use crate::application::use_cases::create_calendar_event::CreateCalendarEvent;
 use crate::application::use_cases::create_workflow::CreateWorkflow;
 use crate::application::use_cases::create_workspace::CreateWorkspace;
 use crate::application::use_cases::manage_company::ManageCompany;
@@ -12,6 +13,7 @@ use crate::application::use_cases::manage_note::ManageNote;
 use crate::application::use_cases::manage_opportunity::ManageOpportunity;
 use crate::application::use_cases::manage_person::ManagePerson;
 use crate::application::use_cases::manage_task::ManageTask;
+use crate::application::use_cases::manage_calendar_event::ManageCalendarEvent;
 use crate::application::use_cases::manage_workflow::ManageWorkflow;
 use crate::application::use_cases::register_user::RegisterUser;
 use crate::domain::OpportunityStage;
@@ -47,6 +49,9 @@ pub struct AppState {
     pub create_workflow: Arc<CreateWorkflow>,
     pub manage_workflow: Arc<ManageWorkflow>,
     pub workflow_repo: Arc<dyn WorkflowRepository>,
+    pub create_calendar_event: Arc<CreateCalendarEvent>,
+    pub manage_calendar_event: Arc<ManageCalendarEvent>,
+    pub calendar_event_repo: Arc<dyn CalendarEventRepository>,
 }
 
 #[derive(Deserialize)]
@@ -529,6 +534,89 @@ pub async fn delete_workflow_handler(
         Err(e) => {
             eprintln!("Error deleting workflow: {:?}", e);
             "Error deleting workflow"
+        }
+    }
+}
+
+// Calendar Event handlers
+#[derive(Deserialize)]
+pub struct CreateCalendarEventPayload {
+    pub title: String,
+    pub start_time: String,
+    pub end_time: String,
+    pub description: Option<String>,
+}
+
+pub async fn get_calendar_events_handler(State(state): State<AppState>) -> impl IntoResponse {
+    let events = state.calendar_event_repo.find_all().await.unwrap_or(vec![]);
+    crate::infrastructure::web::fragments::layout(
+        crate::infrastructure::web::fragments::calendar_event_list(&events),
+    )
+}
+
+pub async fn get_create_calendar_event_handler() -> impl IntoResponse {
+    crate::infrastructure::web::fragments::layout(
+        crate::infrastructure::web::fragments::calendar_event_form(),
+    )
+}
+
+pub async fn post_create_calendar_event_handler(
+    State(state): State<AppState>,
+    axum::Form(payload): axum::Form<CreateCalendarEventPayload>,
+) -> impl IntoResponse {
+    // Parse datetime strings from datetime-local format (YYYY-MM-DDTHH:MM)
+    use chrono::NaiveDateTime;
+
+    let start_time = match NaiveDateTime::parse_from_str(&payload.start_time, "%Y-%m-%dT%H:%M") {
+        Ok(ndt) => chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(ndt, chrono::Utc),
+        Err(_) => {
+            return maud::html! { "Error: Invalid start time format" };
+        }
+    };
+
+    let end_time = match NaiveDateTime::parse_from_str(&payload.end_time, "%Y-%m-%dT%H:%M") {
+        Ok(ndt) => chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(ndt, chrono::Utc),
+        Err(_) => {
+            return maud::html! { "Error: Invalid end time format" };
+        }
+    };
+
+    // Use a dummy connected account ID for now (would come from actual OAuth connection)
+    let dummy_account_id = Uuid::new_v4();
+
+    match state
+        .create_calendar_event
+        .execute(crate::application::use_cases::create_calendar_event::CreateCalendarEventInput {
+            connected_account_id: dummy_account_id,
+            title: payload.title,
+            start_time,
+            end_time,
+            description: payload.description,
+        })
+        .await
+    {
+        Ok(_) => {
+            let events = state.calendar_event_repo.find_all().await.unwrap_or(vec![]);
+            crate::infrastructure::web::fragments::layout(
+                crate::infrastructure::web::fragments::calendar_event_list(&events),
+            )
+        }
+        Err(e) => {
+            eprintln!("Error creating calendar event: {:?}", e);
+            maud::html! { (format!("Error: {:?}", e)) }
+        }
+    }
+}
+
+pub async fn delete_calendar_event_handler(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> impl IntoResponse {
+    match state.manage_calendar_event.delete(id).await {
+        Ok(_) => "",
+        Err(e) => {
+            eprintln!("Error deleting calendar event: {:?}", e);
+            "Error deleting calendar event"
         }
     }
 }

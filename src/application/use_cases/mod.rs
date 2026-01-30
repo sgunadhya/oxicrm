@@ -13,6 +13,8 @@ pub mod create_note;
 pub mod manage_note;
 pub mod create_workflow;
 pub mod manage_workflow;
+pub mod create_calendar_event;
+pub mod manage_calendar_event;
 pub mod record_board_card;
 pub mod register_user;
 

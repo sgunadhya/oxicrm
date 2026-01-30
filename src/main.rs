@@ -59,6 +59,7 @@ async fn main() {
     // Note: RecordBoardCard struct needs update to accept these new dependencies if we want to use them.
     // For now, adhering to the existing struct definition which only required repo.
     // If we want to use them, we'd update RecordBoardCard.
+    use application::use_cases::create_calendar_event::CreateCalendarEvent;
     use application::use_cases::create_company::CreateCompany;
     use application::use_cases::create_note::CreateNote;
     use application::use_cases::create_opportunity::CreateOpportunity;
@@ -66,6 +67,7 @@ async fn main() {
     use application::use_cases::create_task::CreateTask;
     use application::use_cases::create_workflow::CreateWorkflow;
     use application::use_cases::create_workspace::CreateWorkspace;
+    use application::use_cases::manage_calendar_event::ManageCalendarEvent;
     use application::use_cases::manage_company::ManageCompany;
     use application::use_cases::manage_note::ManageNote;
     use application::use_cases::manage_opportunity::ManageOpportunity;
@@ -95,6 +97,8 @@ async fn main() {
     let manage_note_use_case = Arc::new(ManageNote::new(repo.clone()));
     let create_workflow_use_case = Arc::new(CreateWorkflow::new(repo.clone()));
     let manage_workflow_use_case = Arc::new(ManageWorkflow::new(repo.clone()));
+    let create_calendar_event_use_case = Arc::new(CreateCalendarEvent::new(repo.clone()));
+    let manage_calendar_event_use_case = Arc::new(ManageCalendarEvent::new(repo.clone()));
 
     // 5. Initialize App State
     let app_state = AppState {
@@ -119,6 +123,9 @@ async fn main() {
         create_workflow: create_workflow_use_case.clone(),
         manage_workflow: manage_workflow_use_case.clone(),
         workflow_repo: repo.clone(),
+        create_calendar_event: create_calendar_event_use_case.clone(),
+        manage_calendar_event: manage_calendar_event_use_case.clone(),
+        calendar_event_repo: repo.clone(),
     };
 
     // ... seeding ...
@@ -217,6 +224,19 @@ async fn main() {
         .route(
             "/workflows/:id",
             axum::routing::delete(infrastructure::web::handlers::delete_workflow_handler),
+        )
+        .route(
+            "/calendar-events",
+            get(infrastructure::web::handlers::get_calendar_events_handler)
+                .post(infrastructure::web::handlers::post_create_calendar_event_handler),
+        )
+        .route(
+            "/calendar-events/new",
+            get(infrastructure::web::handlers::get_create_calendar_event_handler),
+        )
+        .route(
+            "/calendar-events/:id",
+            axum::routing::delete(infrastructure::web::handlers::delete_calendar_event_handler),
         )
         .route("/cards/:id/move", axum::routing::post(move_card_handler))
         .with_state(app_state);

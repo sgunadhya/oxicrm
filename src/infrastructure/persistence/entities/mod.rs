@@ -1,3 +1,4 @@
+pub mod calendar_event;
 pub mod company;
 pub mod note;
 pub mod opportunity;

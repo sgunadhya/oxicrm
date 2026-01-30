@@ -1,4 +1,4 @@
-use super::states::{OpportunityStage, TaskStatus, UserState, WorkspaceState, WorkflowVersionStatus, WorkflowRunStatus, WorkflowStepType};
+use super::states::{ConnectedAccountStatus, OpportunityStage, TaskStatus, UserState, WorkspaceState, WorkflowVersionStatus, WorkflowRunStatus, WorkflowStepType};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -167,4 +167,35 @@ pub struct WorkflowRun {
     pub status: WorkflowRunStatus,
     pub output: Option<serde_json::Value>,
     pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConnectedAccount {
+    pub id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub provider: String,
+    pub account_owner_id: Uuid,
+    pub status: ConnectedAccountStatus,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CalendarEvent {
+    pub id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub connected_account_id: Uuid,
+    pub title: String,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CalendarEventParticipant {
+    pub id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub calendar_event_id: Uuid,
+    pub email: String,
+    pub person_id: Option<Uuid>,
 }

@@ -259,10 +259,108 @@ impl MigrationTrait for InitialSchema {
                     )
                     .to_owned(),
             )
+            .await?;
+
+        // ConnectedAccount Table
+        manager
+            .create_table(
+                Table::create()
+                    .table(ConnectedAccount::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new(ConnectedAccount::Id)
+                            .uuid()
+                            .not_null()
+                            .primary_key(),
+                    )
+                    .col(ColumnDef::new(ConnectedAccount::Provider).string().not_null())
+                    .col(ColumnDef::new(ConnectedAccount::AccountOwnerId).uuid().not_null())
+                    .col(
+                        ColumnDef::new(ConnectedAccount::Status)
+                            .string()
+                            .not_null()
+                            .default("CONNECTED"),
+                    )
+                    .col(
+                        ColumnDef::new(ConnectedAccount::CreatedAt)
+                            .timestamp_with_time_zone()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(ConnectedAccount::UpdatedAt)
+                            .timestamp_with_time_zone()
+                            .not_null(),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+
+        // CalendarEvent Table
+        manager
+            .create_table(
+                Table::create()
+                    .table(CalendarEvent::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new(CalendarEvent::Id)
+                            .uuid()
+                            .not_null()
+                            .primary_key(),
+                    )
+                    .col(ColumnDef::new(CalendarEvent::ConnectedAccountId).uuid().not_null())
+                    .col(ColumnDef::new(CalendarEvent::Title).string().not_null())
+                    .col(ColumnDef::new(CalendarEvent::StartTime).timestamp_with_time_zone().not_null())
+                    .col(ColumnDef::new(CalendarEvent::EndTime).timestamp_with_time_zone().not_null())
+                    .col(ColumnDef::new(CalendarEvent::Description).text())
+                    .col(
+                        ColumnDef::new(CalendarEvent::CreatedAt)
+                            .timestamp_with_time_zone()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(CalendarEvent::UpdatedAt)
+                            .timestamp_with_time_zone()
+                            .not_null(),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+
+        // CalendarEventParticipant Table
+        manager
+            .create_table(
+                Table::create()
+                    .table(CalendarEventParticipant::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new(CalendarEventParticipant::Id)
+                            .uuid()
+                            .not_null()
+                            .primary_key(),
+                    )
+                    .col(ColumnDef::new(CalendarEventParticipant::CalendarEventId).uuid().not_null())
+                    .col(ColumnDef::new(CalendarEventParticipant::Email).string().not_null())
+                    .col(ColumnDef::new(CalendarEventParticipant::PersonId).uuid())
+                    .col(
+                        ColumnDef::new(CalendarEventParticipant::CreatedAt)
+                            .timestamp_with_time_zone()
+                            .not_null(),
+                    )
+                    .to_owned(),
+            )
             .await
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        manager
+            .drop_table(Table::drop().table(CalendarEventParticipant::Table).to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(CalendarEvent::Table).to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(ConnectedAccount::Table).to_owned())
+            .await?;
         manager
             .drop_table(Table::drop().table(WorkflowRun::Table).to_owned())
             .await?;
@@ -398,4 +496,38 @@ enum WorkflowRun {
     Error,
     CreatedAt,
     UpdatedAt,
+}
+
+#[derive(Iden)]
+enum ConnectedAccount {
+    Table,
+    Id,
+    Provider,
+    AccountOwnerId,
+    Status,
+    CreatedAt,
+    UpdatedAt,
+}
+
+#[derive(Iden)]
+enum CalendarEvent {
+    Table,
+    Id,
+    ConnectedAccountId,
+    Title,
+    StartTime,
+    EndTime,
+    Description,
+    CreatedAt,
+    UpdatedAt,
+}
+
+#[derive(Iden)]
+enum CalendarEventParticipant {
+    Table,
+    Id,
+    CalendarEventId,
+    Email,
+    PersonId,
+    CreatedAt,
 }
