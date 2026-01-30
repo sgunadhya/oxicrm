@@ -1,5 +1,7 @@
 pub mod calendar_event;
 pub mod company;
+pub mod email;
+pub mod email_template;
 pub mod note;
 pub mod opportunity;
 pub mod person;

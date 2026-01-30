@@ -1,4 +1,5 @@
 pub mod billing;
+pub mod email;
 pub mod external;
 pub mod identity;
 pub mod messaging;

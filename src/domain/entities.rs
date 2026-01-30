@@ -1,4 +1,4 @@
-use super::states::{ConnectedAccountStatus, OpportunityStage, TaskStatus, UserState, WorkspaceState, WorkflowVersionStatus, WorkflowRunStatus, WorkflowStepType};
+use super::states::{ConnectedAccountStatus, EmailDirection, EmailStatus, OpportunityStage, TaskStatus, UserState, WorkspaceState, WorkflowVersionStatus, WorkflowRunStatus, WorkflowStepType};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -213,4 +213,44 @@ pub struct TimelineActivity {
     pub note_id: Option<Uuid>,
     pub calendar_event_id: Option<Uuid>,
     pub workflow_id: Option<Uuid>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmailTemplate {
+    pub id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub name: String,
+    pub subject: String,
+    pub body_text: String,
+    pub body_html: Option<String>,
+    pub category: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Email {
+    pub id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub direction: EmailDirection,
+    pub status: EmailStatus,
+    pub from_email: String,
+    pub to_email: String,
+    pub cc_emails: Option<Vec<String>>,
+    pub bcc_emails: Option<Vec<String>>,
+    pub subject: String,
+    pub body_text: String,
+    pub body_html: Option<String>,
+    pub sent_at: Option<DateTime<Utc>>,
+    pub failed_at: Option<DateTime<Utc>>,
+    pub error_message: Option<String>,
+    pub email_template_id: Option<Uuid>,
+    pub timeline_activity_id: Option<Uuid>,
+    pub person_id: Option<Uuid>,
+    pub company_id: Option<Uuid>,
+    pub opportunity_id: Option<Uuid>,
+    pub task_id: Option<Uuid>,
+    pub workflow_id: Option<Uuid>,
+    pub workflow_run_id: Option<Uuid>,
+    pub metadata: Option<serde_json::Value>,
 }

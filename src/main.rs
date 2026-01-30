@@ -104,6 +104,76 @@ async fn main() {
     let create_timeline_activity_use_case = Arc::new(CreateTimelineActivity::new(repo.clone()));
     let manage_timeline_activity_use_case = Arc::new(ManageTimelineActivity::new(repo.clone()));
 
+    // Email System Initialization
+    use application::events::email_subscriber::EmailEventSubscriber;
+    use application::jobs::email_worker::EmailJobWorker;
+    use application::use_cases::manage_email_template::ManageEmailTemplate;
+    use application::use_cases::receive_email::ReceiveEmail;
+    use application::use_cases::send_email::SendEmail;
+    use application::workflow::executor::WorkflowExecutor;
+    use infrastructure::email::{MockEmailProvider, SimpleTemplateEngine};
+
+    let email_provider = Arc::new(MockEmailProvider::new());
+    let template_engine = Arc::new(SimpleTemplateEngine::new());
+
+    let send_email_use_case = Arc::new(SendEmail::new(
+        repo.clone(),
+        repo.clone(),
+        repo.clone(),
+        email_provider.clone(),
+        template_engine.clone(),
+    ));
+
+    let receive_email_use_case = Arc::new(ReceiveEmail::new(repo.clone(), repo.clone()));
+
+    let manage_email_template_use_case = Arc::new(ManageEmailTemplate::new(repo.clone()));
+
+    // Initialize workflow executor (commented out until workflow repositories are implemented)
+    // let workflow_executor = Arc::new(WorkflowExecutor::new(
+    //     repo.clone(),
+    //     repo.clone(),
+    //     repo.clone(),
+    //     send_email_use_case.clone(),
+    // ));
+
+    // Start event subscriber
+    let email_subscriber = Arc::new(EmailEventSubscriber::new(
+        event_bus.clone(),
+        send_email_use_case.clone(),
+    ));
+    email_subscriber
+        .start()
+        .await
+        .expect("Failed to start email event subscriber");
+
+    // Start job worker
+    let (email_job_sender, email_job_receiver) = mpsc::channel(100);
+    let email_worker = EmailJobWorker::new(
+        repo.clone(),
+        email_provider.clone(),
+        email_job_receiver,
+    );
+    tokio::spawn(async move {
+        email_worker.start().await;
+    });
+
+    // Schedule periodic job to process pending emails (every 60 seconds)
+    let job_sender_clone = email_job_sender.clone();
+    tokio::spawn(async move {
+        use std::time::Duration;
+        let mut interval = tokio::time::interval(Duration::from_secs(60));
+        loop {
+            interval.tick().await;
+            use application::ports::scheduling::Job;
+            let _ = job_sender_clone
+                .send(Job {
+                    name: "send_pending_emails".to_string(),
+                    payload: "{}".to_string(),
+                })
+                .await;
+        }
+    });
+
     // 5. Initialize App State
     let app_state = AppState {
         record_use_case: record_use_case.clone(),
@@ -247,6 +317,45 @@ async fn main() {
         )
         .route("/cards/:id/move", axum::routing::post(move_card_handler))
         .with_state(app_state);
+
+    // Email System Routes
+    use infrastructure::web::email_handlers::{
+        create_email_template_handler, delete_email_template_handler, get_email_handler,
+        get_email_template_handler, inbound_email_webhook_handler, list_email_templates_handler,
+        list_emails_handler, send_email_handler, update_email_template_handler, EmailAppState,
+    };
+
+    let email_app_state = EmailAppState {
+        send_email: send_email_use_case.clone(),
+        receive_email: receive_email_use_case.clone(),
+        manage_email_template: manage_email_template_use_case.clone(),
+        email_repo: repo.clone(),
+        email_template_repo: repo.clone(),
+    };
+
+    let email_router = Router::new()
+        .route("/api/emails", axum::routing::post(send_email_handler))
+        .route("/api/emails", axum::routing::get(list_emails_handler))
+        .route("/api/emails/:id", axum::routing::get(get_email_handler))
+        .route(
+            "/api/email-templates",
+            axum::routing::get(list_email_templates_handler)
+                .post(create_email_template_handler),
+        )
+        .route(
+            "/api/email-templates/:id",
+            axum::routing::get(get_email_template_handler)
+                .put(update_email_template_handler)
+                .delete(delete_email_template_handler),
+        )
+        .route(
+            "/webhooks/inbound-email",
+            axum::routing::post(inbound_email_webhook_handler),
+        )
+        .with_state(email_app_state);
+
+    // Merge routers
+    let app = app.merge(email_router);
 
     let listener = TcpListener::bind("0.0.0.0:3001").await.unwrap();
     println!("Listening on {}", listener.local_addr().unwrap());

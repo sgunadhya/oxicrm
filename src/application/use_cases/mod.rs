@@ -20,4 +20,8 @@ pub mod manage_timeline_activity;
 pub mod record_board_card;
 pub mod register_user;
 
+pub mod send_email;
+pub mod receive_email;
+pub mod manage_email_template;
+
 pub use record_board_card::RecordBoardCard;

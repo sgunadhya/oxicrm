@@ -95,3 +95,29 @@ impl Default for ConnectedAccountStatus {
         Self::Connected
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum EmailDirection {
+    Outbound,
+    Inbound,
+}
+
+impl Default for EmailDirection {
+    fn default() -> Self {
+        Self::Outbound
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum EmailStatus {
+    Pending,
+    Sent,
+    Failed,
+    Received,
+}
+
+impl Default for EmailStatus {
+    fn default() -> Self {
+        Self::Pending
+    }
+}

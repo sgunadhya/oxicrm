@@ -1,9 +1,9 @@
 use super::entities::opportunity::{self, Entity as OpportunityEntity};
 use crate::application::ports::output::{
-    CalendarEventRepository, NoteRepository, OpportunityRepository, TaskRepository, TaskTargetRepository, TimelineActivityRepository, UserRepository, WorkflowRepository, WorkspaceRepository,
+    CalendarEventRepository, EmailRepository, EmailTemplateRepository, OpportunityRepository, TimelineActivityRepository, UserRepository, WorkflowRepository, WorkspaceRepository,
 };
 use crate::domain::{
-    CalendarEvent, DomainError, Note, Opportunity, OpportunityStage, Person, Task, TaskTarget, TimelineActivity, User, Workflow, Workspace, WorkspaceMember,
+    CalendarEvent, DomainError, Email, EmailTemplate, Opportunity, OpportunityStage, Person, TimelineActivity, User, Workflow, Workspace, WorkspaceMember,
 };
 use crate::infrastructure::persistence::entities::{person, user, workspace, workspace_member};
 use async_trait::async_trait;
@@ -753,6 +753,278 @@ impl TimelineActivityRepository for SeaOrmRepo {
     async fn delete(&self, id: Uuid) -> Result<(), DomainError> {
         use crate::infrastructure::persistence::entities::timeline_activity;
         timeline_activity::Entity::delete_by_id(id)
+            .exec(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl EmailRepository for SeaOrmRepo {
+    async fn find_all(&self) -> Result<Vec<Email>, DomainError> {
+        use crate::infrastructure::persistence::entities::email;
+        let models = email::Entity::find()
+            .order_by_desc(email::Column::CreatedAt)
+            .all(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+    }
+
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<Email>, DomainError> {
+        use crate::infrastructure::persistence::entities::email;
+        let model = email::Entity::find_by_id(id)
+            .one(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(model.map(|m| m.to_domain()))
+    }
+
+    async fn find_by_person_id(&self, person_id: Uuid) -> Result<Vec<Email>, DomainError> {
+        use crate::infrastructure::persistence::entities::email;
+        let models = email::Entity::find()
+            .filter(email::Column::PersonId.eq(person_id))
+            .order_by_desc(email::Column::CreatedAt)
+            .all(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+    }
+
+    async fn find_by_company_id(&self, company_id: Uuid) -> Result<Vec<Email>, DomainError> {
+        use crate::infrastructure::persistence::entities::email;
+        let models = email::Entity::find()
+            .filter(email::Column::CompanyId.eq(company_id))
+            .order_by_desc(email::Column::CreatedAt)
+            .all(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+    }
+
+    async fn find_by_opportunity_id(&self, opportunity_id: Uuid) -> Result<Vec<Email>, DomainError> {
+        use crate::infrastructure::persistence::entities::email;
+        let models = email::Entity::find()
+            .filter(email::Column::OpportunityId.eq(opportunity_id))
+            .order_by_desc(email::Column::CreatedAt)
+            .all(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+    }
+
+    async fn find_pending(&self) -> Result<Vec<Email>, DomainError> {
+        use crate::infrastructure::persistence::entities::email;
+        let models = email::Entity::find()
+            .filter(email::Column::Status.eq("pending"))
+            .order_by_asc(email::Column::CreatedAt)
+            .all(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+    }
+
+    async fn create(&self, email: Email) -> Result<Email, DomainError> {
+        use crate::domain::states::{EmailDirection, EmailStatus};
+        use crate::infrastructure::persistence::entities::email;
+
+        let direction_str = match email.direction {
+            EmailDirection::Outbound => "outbound",
+            EmailDirection::Inbound => "inbound",
+        };
+
+        let status_str = match email.status {
+            EmailStatus::Pending => "pending",
+            EmailStatus::Sent => "sent",
+            EmailStatus::Failed => "failed",
+            EmailStatus::Received => "received",
+        };
+
+        let cc_emails_json = email.cc_emails.as_ref().map(|cc| {
+            serde_json::to_value(cc).ok()
+        }).flatten();
+
+        let bcc_emails_json = email.bcc_emails.as_ref().map(|bcc| {
+            serde_json::to_value(bcc).ok()
+        }).flatten();
+
+        let model = email::ActiveModel {
+            id: Set(email.id),
+            created_at: Set(email.created_at.into()),
+            updated_at: Set(email.updated_at.into()),
+            direction: Set(direction_str.to_string()),
+            status: Set(status_str.to_string()),
+            from_email: Set(email.from_email),
+            to_email: Set(email.to_email),
+            cc_emails: Set(cc_emails_json),
+            bcc_emails: Set(bcc_emails_json),
+            subject: Set(email.subject),
+            body_text: Set(email.body_text),
+            body_html: Set(email.body_html),
+            sent_at: Set(email.sent_at.map(|d| d.into())),
+            failed_at: Set(email.failed_at.map(|d| d.into())),
+            error_message: Set(email.error_message),
+            email_template_id: Set(email.email_template_id),
+            timeline_activity_id: Set(email.timeline_activity_id),
+            person_id: Set(email.person_id),
+            company_id: Set(email.company_id),
+            opportunity_id: Set(email.opportunity_id),
+            task_id: Set(email.task_id),
+            workflow_id: Set(email.workflow_id),
+            workflow_run_id: Set(email.workflow_run_id),
+            metadata: Set(email.metadata),
+        };
+
+        let result = model
+            .insert(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(result.to_domain())
+    }
+
+    async fn update(&self, email: Email) -> Result<Email, DomainError> {
+        use crate::domain::states::{EmailDirection, EmailStatus};
+        use crate::infrastructure::persistence::entities::email;
+
+        let direction_str = match email.direction {
+            EmailDirection::Outbound => "outbound",
+            EmailDirection::Inbound => "inbound",
+        };
+
+        let status_str = match email.status {
+            EmailStatus::Pending => "pending",
+            EmailStatus::Sent => "sent",
+            EmailStatus::Failed => "failed",
+            EmailStatus::Received => "received",
+        };
+
+        let cc_emails_json = email.cc_emails.as_ref().map(|cc| {
+            serde_json::to_value(cc).ok()
+        }).flatten();
+
+        let bcc_emails_json = email.bcc_emails.as_ref().map(|bcc| {
+            serde_json::to_value(bcc).ok()
+        }).flatten();
+
+        let model = email::ActiveModel {
+            id: Set(email.id),
+            created_at: Set(email.created_at.into()),
+            updated_at: Set(chrono::Utc::now().into()),
+            direction: Set(direction_str.to_string()),
+            status: Set(status_str.to_string()),
+            from_email: Set(email.from_email),
+            to_email: Set(email.to_email),
+            cc_emails: Set(cc_emails_json),
+            bcc_emails: Set(bcc_emails_json),
+            subject: Set(email.subject),
+            body_text: Set(email.body_text),
+            body_html: Set(email.body_html),
+            sent_at: Set(email.sent_at.map(|d| d.into())),
+            failed_at: Set(email.failed_at.map(|d| d.into())),
+            error_message: Set(email.error_message),
+            email_template_id: Set(email.email_template_id),
+            timeline_activity_id: Set(email.timeline_activity_id),
+            person_id: Set(email.person_id),
+            company_id: Set(email.company_id),
+            opportunity_id: Set(email.opportunity_id),
+            task_id: Set(email.task_id),
+            workflow_id: Set(email.workflow_id),
+            workflow_run_id: Set(email.workflow_run_id),
+            metadata: Set(email.metadata),
+        };
+
+        let result = model
+            .update(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(result.to_domain())
+    }
+
+    async fn delete(&self, id: Uuid) -> Result<(), DomainError> {
+        use crate::infrastructure::persistence::entities::email;
+        email::Entity::delete_by_id(id)
+            .exec(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl EmailTemplateRepository for SeaOrmRepo {
+    async fn find_all(&self) -> Result<Vec<EmailTemplate>, DomainError> {
+        use crate::infrastructure::persistence::entities::email_template;
+        let models = email_template::Entity::find()
+            .order_by_asc(email_template::Column::Name)
+            .all(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+    }
+
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<EmailTemplate>, DomainError> {
+        use crate::infrastructure::persistence::entities::email_template;
+        let model = email_template::Entity::find_by_id(id)
+            .one(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(model.map(|m| m.to_domain()))
+    }
+
+    async fn find_by_name(&self, name: &str) -> Result<Option<EmailTemplate>, DomainError> {
+        use crate::infrastructure::persistence::entities::email_template;
+        let model = email_template::Entity::find()
+            .filter(email_template::Column::Name.eq(name))
+            .one(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(model.map(|m| m.to_domain()))
+    }
+
+    async fn create(&self, template: EmailTemplate) -> Result<EmailTemplate, DomainError> {
+        use crate::infrastructure::persistence::entities::email_template;
+        let model = email_template::ActiveModel {
+            id: Set(template.id),
+            created_at: Set(template.created_at.into()),
+            updated_at: Set(template.updated_at.into()),
+            name: Set(template.name),
+            subject: Set(template.subject),
+            body_text: Set(template.body_text),
+            body_html: Set(template.body_html),
+            category: Set(template.category),
+        };
+
+        let result = model
+            .insert(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(result.to_domain())
+    }
+
+    async fn update(&self, template: EmailTemplate) -> Result<EmailTemplate, DomainError> {
+        use crate::infrastructure::persistence::entities::email_template;
+        let model = email_template::ActiveModel {
+            id: Set(template.id),
+            created_at: Set(template.created_at.into()),
+            updated_at: Set(chrono::Utc::now().into()),
+            name: Set(template.name),
+            subject: Set(template.subject),
+            body_text: Set(template.body_text),
+            body_html: Set(template.body_html),
+            category: Set(template.category),
+        };
+
+        let result = model
+            .update(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(result.to_domain())
+    }
+
+    async fn delete(&self, id: Uuid) -> Result<(), DomainError> {
+        use crate::infrastructure::persistence::entities::email_template;
+        email_template::Entity::delete_by_id(id)
             .exec(&self.db)
             .await
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;

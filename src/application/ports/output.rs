@@ -1,4 +1,4 @@
-use crate::domain::{CalendarEvent, CalendarEventParticipant, Company, ConnectedAccount, DomainError, Note, Opportunity, Person, Task, TaskTarget, TimelineActivity, User, Workflow, WorkflowVersion, WorkflowVersionStep, WorkflowRun, Workspace, WorkspaceMember};
+use crate::domain::{CalendarEvent, CalendarEventParticipant, Company, ConnectedAccount, DomainError, Email, EmailTemplate, Note, Opportunity, Person, Task, TaskTarget, TimelineActivity, User, Workflow, WorkflowVersion, WorkflowVersionStep, WorkflowRun, Workspace, WorkspaceMember};
 use async_trait::async_trait;
 
 #[async_trait]
@@ -131,5 +131,28 @@ pub trait TimelineActivityRepository: Send + Sync {
     async fn find_by_opportunity_id(&self, opportunity_id: uuid::Uuid) -> Result<Vec<TimelineActivity>, DomainError>;
     async fn find_by_task_id(&self, task_id: uuid::Uuid) -> Result<Vec<TimelineActivity>, DomainError>;
     async fn create(&self, activity: TimelineActivity) -> Result<TimelineActivity, DomainError>;
+    async fn delete(&self, id: uuid::Uuid) -> Result<(), DomainError>;
+}
+
+#[async_trait]
+pub trait EmailRepository: Send + Sync {
+    async fn find_all(&self) -> Result<Vec<Email>, DomainError>;
+    async fn find_by_id(&self, id: uuid::Uuid) -> Result<Option<Email>, DomainError>;
+    async fn find_by_person_id(&self, person_id: uuid::Uuid) -> Result<Vec<Email>, DomainError>;
+    async fn find_by_company_id(&self, company_id: uuid::Uuid) -> Result<Vec<Email>, DomainError>;
+    async fn find_by_opportunity_id(&self, opportunity_id: uuid::Uuid) -> Result<Vec<Email>, DomainError>;
+    async fn find_pending(&self) -> Result<Vec<Email>, DomainError>;
+    async fn create(&self, email: Email) -> Result<Email, DomainError>;
+    async fn update(&self, email: Email) -> Result<Email, DomainError>;
+    async fn delete(&self, id: uuid::Uuid) -> Result<(), DomainError>;
+}
+
+#[async_trait]
+pub trait EmailTemplateRepository: Send + Sync {
+    async fn find_all(&self) -> Result<Vec<EmailTemplate>, DomainError>;
+    async fn find_by_id(&self, id: uuid::Uuid) -> Result<Option<EmailTemplate>, DomainError>;
+    async fn find_by_name(&self, name: &str) -> Result<Option<EmailTemplate>, DomainError>;
+    async fn create(&self, template: EmailTemplate) -> Result<EmailTemplate, DomainError>;
+    async fn update(&self, template: EmailTemplate) -> Result<EmailTemplate, DomainError>;
     async fn delete(&self, id: uuid::Uuid) -> Result<(), DomainError>;
 }
