@@ -1,9 +1,9 @@
 use super::entities::opportunity::{self, Entity as OpportunityEntity};
 use crate::application::ports::output::{
-    OpportunityRepository, UserRepository, WorkspaceRepository,
+    NoteRepository, OpportunityRepository, TaskRepository, TaskTargetRepository, UserRepository, WorkspaceRepository,
 };
 use crate::domain::{
-    DomainError, Opportunity, OpportunityStage, Person, User, Workspace, WorkspaceMember,
+    DomainError, Note, Opportunity, OpportunityStage, Person, Task, TaskTarget, User, Workspace, WorkspaceMember,
 };
 use crate::infrastructure::persistence::entities::{person, user, workspace, workspace_member};
 use async_trait::async_trait;
@@ -328,6 +328,209 @@ impl crate::application::ports::output::CompanyRepository for SeaOrmRepo {
         };
         model
             .update(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(())
+    }
+}
+#[async_trait]
+impl crate::application::ports::output::TaskRepository for SeaOrmRepo {
+    async fn find_all(&self) -> Result<Vec<crate::domain::Task>, DomainError> {
+        use crate::infrastructure::persistence::entities::task;
+        let models = task::Entity::find()
+            .filter(task::Column::DeletedAt.is_null())
+            .all(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+    }
+
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<crate::domain::Task>, DomainError> {
+        use crate::infrastructure::persistence::entities::task;
+        let model = task::Entity::find_by_id(id)
+            .one(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(model.map(|m| m.to_domain()))
+    }
+
+    async fn create(&self, task: crate::domain::Task) -> Result<crate::domain::Task, DomainError> {
+        use crate::infrastructure::persistence::entities::task;
+        let status_str = match task.status {
+            crate::domain::states::TaskStatus::Todo => "TODO",
+            crate::domain::states::TaskStatus::InProgress => "IN_PROGRESS",
+            crate::domain::states::TaskStatus::Done => "DONE",
+        };
+
+        let model = task::ActiveModel {
+            id: Set(task.id),
+            created_at: Set(task.created_at.into()),
+            updated_at: Set(task.updated_at.into()),
+            deleted_at: Set(None),
+            title: Set(task.title),
+            body: Set(task.body),
+            status: Set(status_str.to_string()),
+            position: Set(task.position),
+            assignee_id: Set(task.assignee_id),
+            due_at: Set(task.due_at.map(|d| d.into())),
+        };
+
+        let result = model
+            .insert(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(result.to_domain())
+    }
+
+    async fn update(&self, task: crate::domain::Task) -> Result<crate::domain::Task, DomainError> {
+        use crate::infrastructure::persistence::entities::task;
+        let status_str = match task.status {
+            crate::domain::states::TaskStatus::Todo => "TODO",
+            crate::domain::states::TaskStatus::InProgress => "IN_PROGRESS",
+            crate::domain::states::TaskStatus::Done => "DONE",
+        };
+
+        let model = task::ActiveModel {
+            id: Set(task.id),
+            updated_at: Set(chrono::Utc::now().into()),
+            title: Set(task.title),
+            body: Set(task.body),
+            status: Set(status_str.to_string()),
+            position: Set(task.position),
+            assignee_id: Set(task.assignee_id),
+            due_at: Set(task.due_at.map(|d| d.into())),
+            ..Default::default()
+        };
+
+        let result = model
+            .update(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(result.to_domain())
+    }
+
+    async fn delete(&self, id: Uuid) -> Result<(), DomainError> {
+        use crate::infrastructure::persistence::entities::task;
+        let model = task::ActiveModel {
+            id: Set(id),
+            deleted_at: Set(Some(chrono::Utc::now().into())),
+            ..Default::default()
+        };
+        model
+            .update(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl crate::application::ports::output::NoteRepository for SeaOrmRepo {
+    async fn find_all(&self) -> Result<Vec<crate::domain::Note>, DomainError> {
+        use crate::infrastructure::persistence::entities::note;
+        let models = note::Entity::find()
+            .filter(note::Column::DeletedAt.is_null())
+            .all(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+    }
+
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<crate::domain::Note>, DomainError> {
+        use crate::infrastructure::persistence::entities::note;
+        let model = note::Entity::find_by_id(id)
+            .one(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(model.map(|m| m.to_domain()))
+    }
+
+    async fn create(&self, note: crate::domain::Note) -> Result<crate::domain::Note, DomainError> {
+        use crate::infrastructure::persistence::entities::note;
+        let model = note::ActiveModel {
+            id: Set(note.id),
+            created_at: Set(note.created_at.into()),
+            updated_at: Set(note.updated_at.into()),
+            deleted_at: Set(None),
+            title: Set(note.title),
+            body_v2: Set(note.body_v2),
+            position: Set(note.position),
+        };
+
+        let result = model
+            .insert(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(result.to_domain())
+    }
+
+    async fn update(&self, note: crate::domain::Note) -> Result<crate::domain::Note, DomainError> {
+        use crate::infrastructure::persistence::entities::note;
+        let model = note::ActiveModel {
+            id: Set(note.id),
+            updated_at: Set(chrono::Utc::now().into()),
+            title: Set(note.title),
+            body_v2: Set(note.body_v2),
+            position: Set(note.position),
+            ..Default::default()
+        };
+
+        let result = model
+            .update(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(result.to_domain())
+    }
+
+    async fn delete(&self, id: Uuid) -> Result<(), DomainError> {
+        use crate::infrastructure::persistence::entities::note;
+        let model = note::ActiveModel {
+            id: Set(id),
+            deleted_at: Set(Some(chrono::Utc::now().into())),
+            ..Default::default()
+        };
+        model
+            .update(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl crate::application::ports::output::TaskTargetRepository for SeaOrmRepo {
+    async fn find_by_task_id(&self, task_id: Uuid) -> Result<Vec<crate::domain::TaskTarget>, DomainError> {
+        use crate::infrastructure::persistence::entities::task_target;
+        let models = task_target::Entity::find()
+            .filter(task_target::Column::TaskId.eq(task_id))
+            .all(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+    }
+
+    async fn create(&self, task_target: crate::domain::TaskTarget) -> Result<crate::domain::TaskTarget, DomainError> {
+        use crate::infrastructure::persistence::entities::task_target;
+        let model = task_target::ActiveModel {
+            id: Set(task_target.id),
+            created_at: Set(task_target.created_at.into()),
+            task_id: Set(task_target.task_id),
+            person_id: Set(task_target.person_id),
+            company_id: Set(task_target.company_id),
+            opportunity_id: Set(task_target.opportunity_id),
+        };
+
+        let result = model
+            .insert(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(result.to_domain())
+    }
+
+    async fn delete(&self, id: Uuid) -> Result<(), DomainError> {
+        use crate::infrastructure::persistence::entities::task_target;
+        task_target::Entity::delete_by_id(id)
+            .exec(&self.db)
             .await
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
         Ok(())

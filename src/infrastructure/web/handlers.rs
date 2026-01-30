@@ -1,12 +1,16 @@
 use crate::application::ports::input::{CreateWorkspaceUseCase, RecordUseCase};
-use crate::application::ports::output::{CompanyRepository, OpportunityRepository, PersonRepository};
+use crate::application::ports::output::{CompanyRepository, NoteRepository, OpportunityRepository, PersonRepository, TaskRepository};
 use crate::application::use_cases::create_company::CreateCompany;
+use crate::application::use_cases::create_note::CreateNote;
 use crate::application::use_cases::create_opportunity::CreateOpportunity;
 use crate::application::use_cases::create_person::CreatePerson;
+use crate::application::use_cases::create_task::CreateTask;
 use crate::application::use_cases::create_workspace::CreateWorkspace;
 use crate::application::use_cases::manage_company::ManageCompany;
+use crate::application::use_cases::manage_note::ManageNote;
 use crate::application::use_cases::manage_opportunity::ManageOpportunity;
 use crate::application::use_cases::manage_person::ManagePerson;
+use crate::application::use_cases::manage_task::ManageTask;
 use crate::application::use_cases::register_user::RegisterUser;
 use crate::domain::OpportunityStage;
 use axum::{
@@ -32,6 +36,12 @@ pub struct AppState {
     pub create_opportunity: Arc<CreateOpportunity>,
     pub manage_opportunity: Arc<ManageOpportunity>,
     pub opportunity_repo: Arc<dyn OpportunityRepository>,
+    pub create_task: Arc<CreateTask>,
+    pub manage_task: Arc<ManageTask>,
+    pub task_repo: Arc<dyn TaskRepository>,
+    pub create_note: Arc<CreateNote>,
+    pub manage_note: Arc<ManageNote>,
+    pub note_repo: Arc<dyn NoteRepository>,
 }
 
 #[derive(Deserialize)]
@@ -325,6 +335,136 @@ pub async fn delete_opportunity_handler(
         Err(e) => {
             eprintln!("Error deleting opportunity: {:?}", e);
             "Error deleting opportunity"
+        }
+    }
+}
+
+// Task handlers
+#[derive(Deserialize)]
+pub struct CreateTaskPayload {
+    pub title: String,
+    pub body: Option<String>,
+    pub status: Option<String>,
+    pub assignee_id: Option<Uuid>,
+    pub due_at: Option<String>,
+}
+
+pub async fn get_tasks_handler(State(state): State<AppState>) -> impl IntoResponse {
+    let tasks = state.task_repo.find_all().await.unwrap_or(vec![]);
+    crate::infrastructure::web::fragments::layout(
+        crate::infrastructure::web::fragments::task_list(&tasks),
+    )
+}
+
+pub async fn get_create_task_handler() -> impl IntoResponse {
+    crate::infrastructure::web::fragments::layout(
+        crate::infrastructure::web::fragments::task_form(),
+    )
+}
+
+pub async fn post_create_task_handler(
+    State(state): State<AppState>,
+    axum::Form(payload): axum::Form<CreateTaskPayload>,
+) -> impl IntoResponse {
+    let due_at = payload.due_at.and_then(|d| {
+        chrono::DateTime::parse_from_rfc3339(&d).ok().map(|dt| dt.with_timezone(&chrono::Utc))
+    });
+
+    match state
+        .create_task
+        .execute(
+            crate::application::use_cases::create_task::CreateTaskInput {
+                title: payload.title,
+                body: payload.body,
+                status: payload.status,
+                assignee_id: payload.assignee_id,
+                due_at,
+            },
+        )
+        .await
+    {
+        Ok(_) => {
+            let tasks = state.task_repo.find_all().await.unwrap_or(vec![]);
+            crate::infrastructure::web::fragments::layout(
+                crate::infrastructure::web::fragments::task_list(&tasks),
+            )
+        }
+        Err(e) => {
+            eprintln!("Error creating task: {:?}", e);
+            maud::html! { (format!("Error: {:?}", e)) }
+        }
+    }
+}
+
+pub async fn delete_task_handler(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> impl IntoResponse {
+    match state.manage_task.delete(id).await {
+        Ok(_) => "",
+        Err(e) => {
+            eprintln!("Error deleting task: {:?}", e);
+            "Error deleting task"
+        }
+    }
+}
+
+// Note handlers
+#[derive(Deserialize)]
+pub struct CreateNotePayload {
+    pub title: String,
+    pub body_v2: Option<String>,
+}
+
+pub async fn get_notes_handler(State(state): State<AppState>) -> impl IntoResponse {
+    let notes = state.note_repo.find_all().await.unwrap_or(vec![]);
+    crate::infrastructure::web::fragments::layout(
+        crate::infrastructure::web::fragments::note_list(&notes),
+    )
+}
+
+pub async fn get_create_note_handler() -> impl IntoResponse {
+    crate::infrastructure::web::fragments::layout(
+        crate::infrastructure::web::fragments::note_form(),
+    )
+}
+
+pub async fn post_create_note_handler(
+    State(state): State<AppState>,
+    axum::Form(payload): axum::Form<CreateNotePayload>,
+) -> impl IntoResponse {
+    match state
+        .create_note
+        .execute(
+            crate::application::use_cases::create_note::CreateNoteInput {
+                title: payload.title,
+                body_v2: payload.body_v2,
+            },
+        )
+        .await
+    {
+        Ok(_) => {
+            let notes = state.note_repo.find_all().await.unwrap_or(vec![]);
+            crate::infrastructure::web::fragments::layout(
+                crate::infrastructure::web::fragments::note_list(&notes),
+            )
+        }
+        Err(e) => {
+            eprintln!("Error creating note: {:?}", e);
+            maud::html! { (format!("Error: {:?}", e)) }
+        }
+    }
+}
+
+pub async fn delete_note_handler(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> impl IntoResponse {
+    match state.manage_note.delete(id).await {
+        Ok(_) => "",
+        Err(e) => {
+            eprintln!("Error deleting note: {:?}", e);
+            "Error deleting note"
         }
     }
 }

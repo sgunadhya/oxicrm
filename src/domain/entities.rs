@@ -106,4 +106,26 @@ pub struct Task {
     pub status: TaskStatus,
     pub position: i32,
     pub assignee_id: Option<Uuid>,
+    pub due_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Note {
+    pub id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
+    pub title: String,
+    pub body_v2: Option<String>,
+    pub position: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskTarget {
+    pub id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub task_id: Uuid,
+    pub person_id: Option<Uuid>,
+    pub company_id: Option<Uuid>,
+    pub opportunity_id: Option<Uuid>,
 }

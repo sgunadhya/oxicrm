@@ -1,6 +1,8 @@
 /target
 *.md
 *.feature
-*.dbe2e-tests/node_modules/
+*.db
+.DS_Store
+e2e-tests/node_modules/
 e2e-tests/playwright-report/
 e2e-tests/test-results/

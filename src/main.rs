@@ -60,12 +60,16 @@ async fn main() {
     // For now, adhering to the existing struct definition which only required repo.
     // If we want to use them, we'd update RecordBoardCard.
     use application::use_cases::create_company::CreateCompany;
+    use application::use_cases::create_note::CreateNote;
     use application::use_cases::create_opportunity::CreateOpportunity;
     use application::use_cases::create_person::CreatePerson;
+    use application::use_cases::create_task::CreateTask;
     use application::use_cases::create_workspace::CreateWorkspace;
     use application::use_cases::manage_company::ManageCompany;
+    use application::use_cases::manage_note::ManageNote;
     use application::use_cases::manage_opportunity::ManageOpportunity;
     use application::use_cases::manage_person::ManagePerson;
+    use application::use_cases::manage_task::ManageTask;
     use application::use_cases::register_user::RegisterUser;
     // ... imports ...
 
@@ -83,6 +87,10 @@ async fn main() {
     let manage_company_use_case = Arc::new(ManageCompany::new(repo.clone()));
     let create_opportunity_use_case = Arc::new(CreateOpportunity::new(repo.clone()));
     let manage_opportunity_use_case = Arc::new(ManageOpportunity::new(repo.clone()));
+    let create_task_use_case = Arc::new(CreateTask::new(repo.clone()));
+    let manage_task_use_case = Arc::new(ManageTask::new(repo.clone()));
+    let create_note_use_case = Arc::new(CreateNote::new(repo.clone()));
+    let manage_note_use_case = Arc::new(ManageNote::new(repo.clone()));
 
     // 5. Initialize App State
     let app_state = AppState {
@@ -98,6 +106,12 @@ async fn main() {
         create_opportunity: create_opportunity_use_case.clone(),
         manage_opportunity: manage_opportunity_use_case.clone(),
         opportunity_repo: repo.clone(),
+        create_task: create_task_use_case.clone(),
+        manage_task: manage_task_use_case.clone(),
+        task_repo: repo.clone(),
+        create_note: create_note_use_case.clone(),
+        manage_note: manage_note_use_case.clone(),
+        note_repo: repo.clone(),
     };
 
     // ... seeding ...
@@ -157,6 +171,32 @@ async fn main() {
         .route(
             "/opportunities/:id",
             axum::routing::delete(infrastructure::web::handlers::delete_opportunity_handler),
+        )
+        .route(
+            "/tasks",
+            get(infrastructure::web::handlers::get_tasks_handler)
+                .post(infrastructure::web::handlers::post_create_task_handler),
+        )
+        .route(
+            "/tasks/new",
+            get(infrastructure::web::handlers::get_create_task_handler),
+        )
+        .route(
+            "/tasks/:id",
+            axum::routing::delete(infrastructure::web::handlers::delete_task_handler),
+        )
+        .route(
+            "/notes",
+            get(infrastructure::web::handlers::get_notes_handler)
+                .post(infrastructure::web::handlers::post_create_note_handler),
+        )
+        .route(
+            "/notes/new",
+            get(infrastructure::web::handlers::get_create_note_handler),
+        )
+        .route(
+            "/notes/:id",
+            axum::routing::delete(infrastructure::web::handlers::delete_note_handler),
         )
         .route("/cards/:id/move", axum::routing::post(move_card_handler))
         .with_state(app_state);

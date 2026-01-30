@@ -1,6 +1,9 @@
 pub mod company;
+pub mod note;
 pub mod opportunity;
 pub mod person;
+pub mod task;
+pub mod task_target;
 pub mod user;
 pub mod workspace;
 pub mod workspace_member;

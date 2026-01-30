@@ -363,3 +363,144 @@ pub fn opportunity_form(companies: &[crate::domain::Company], people: &[Person])
         }
     }
 }
+
+pub fn task_list(tasks: &[crate::domain::Task]) -> Markup {
+    html! {
+        div class="max-w-4xl mx-auto mt-10" {
+            div class="flex justify-between items-center mb-6" {
+                 h2 class="text-2xl font-bold" { "Tasks" }
+                 a href="/tasks/new" class="bg-blue-500 text-white px-4 py-2 rounded" { "Add Task" }
+            }
+
+            table class="min-w-full bg-white border" {
+                thead {
+                    tr {
+                        th class="p-4 border-b text-left" { "Title" }
+                        th class="p-4 border-b text-left" { "Status" }
+                        th class="p-4 border-b text-left" { "Due Date" }
+                        th class="p-4 border-b text-left" { "Actions" }
+                    }
+                }
+                tbody {
+                    @for task in tasks {
+                        tr class="hover:bg-gray-50" {
+                            td class="p-4 border-b" { (task.title) }
+                            td class="p-4 border-b" {
+                                @let status_name = match task.status {
+                                    crate::domain::states::TaskStatus::Todo => "TODO",
+                                    crate::domain::states::TaskStatus::InProgress => "IN PROGRESS",
+                                    crate::domain::states::TaskStatus::Done => "DONE",
+                                };
+                                (status_name)
+                            }
+                            td class="p-4 border-b" {
+                                @if let Some(due_at) = task.due_at {
+                                    (due_at.format("%Y-%m-%d %H:%M").to_string())
+                                } @else {
+                                    "-"
+                                }
+                            }
+                            td class="p-4 border-b" {
+                                button
+                                    hx-delete=(format!("/tasks/{}", task.id))
+                                    hx-target="closest tr"
+                                    hx-swap="outerHTML"
+                                    class="text-red-500 hover:text-red-700"
+                                { "Delete" }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+pub fn task_form() -> Markup {
+    html! {
+        div class="max-w-md mx-auto mt-10" {
+            form hx-post="/tasks" hx-target="body" {
+                h2 class="text-2xl font-bold mb-4" { "Add New Task" }
+
+                label class="block mb-2" { "Title *" }
+                input type="text" name="title" class="border p-2 w-full mb-4" required;
+
+                label class="block mb-2" { "Body" }
+                textarea name="body" class="border p-2 w-full mb-4" rows="3" {};
+
+                label class="block mb-2" { "Status" }
+                select name="status" class="border p-2 w-full mb-4" {
+                    option value="TODO" selected { "TODO" }
+                    option value="IN_PROGRESS" { "IN PROGRESS" }
+                    option value="DONE" { "DONE" }
+                }
+
+                label class="block mb-2" { "Due Date" }
+                input type="datetime-local" name="due_at" class="border p-2 w-full mb-4";
+
+                div class="flex justify-between items-center" {
+                     a href="/tasks" class="text-gray-500" { "Cancel" }
+                     button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded" { "Save" }
+                }
+            }
+        }
+    }
+}
+
+pub fn note_list(notes: &[crate::domain::Note]) -> Markup {
+    html! {
+        div class="max-w-4xl mx-auto mt-10" {
+            div class="flex justify-between items-center mb-6" {
+                 h2 class="text-2xl font-bold" { "Notes" }
+                 a href="/notes/new" class="bg-blue-500 text-white px-4 py-2 rounded" { "Add Note" }
+            }
+
+            table class="min-w-full bg-white border" {
+                thead {
+                    tr {
+                        th class="p-4 border-b text-left" { "Title" }
+                        th class="p-4 border-b text-left" { "Created" }
+                        th class="p-4 border-b text-left" { "Actions" }
+                    }
+                }
+                tbody {
+                    @for note in notes {
+                        tr class="hover:bg-gray-50" {
+                            td class="p-4 border-b" { (note.title) }
+                            td class="p-4 border-b" { (note.created_at.format("%Y-%m-%d %H:%M").to_string()) }
+                            td class="p-4 border-b" {
+                                button
+                                    hx-delete=(format!("/notes/{}", note.id))
+                                    hx-target="closest tr"
+                                    hx-swap="outerHTML"
+                                    class="text-red-500 hover:text-red-700"
+                                { "Delete" }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+pub fn note_form() -> Markup {
+    html! {
+        div class="max-w-md mx-auto mt-10" {
+            form hx-post="/notes" hx-target="body" {
+                h2 class="text-2xl font-bold mb-4" { "Add New Note" }
+
+                label class="block mb-2" { "Title *" }
+                input type="text" name="title" class="border p-2 w-full mb-4" required;
+
+                label class="block mb-2" { "Content" }
+                textarea name="body_v2" class="border p-2 w-full mb-4" rows="6" placeholder="Rich text content" {};
+
+                div class="flex justify-between items-center" {
+                     a href="/notes" class="text-gray-500" { "Cancel" }
+                     button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded" { "Save" }
+                }
+            }
+        }
+    }
+}
