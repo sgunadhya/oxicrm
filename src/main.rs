@@ -59,6 +59,7 @@ async fn main() {
     // Note: RecordBoardCard struct needs update to accept these new dependencies if we want to use them.
     // For now, adhering to the existing struct definition which only required repo.
     // If we want to use them, we'd update RecordBoardCard.
+    use application::use_cases::create_workspace::CreateWorkspace;
     use application::use_cases::register_user::RegisterUser;
     // ... imports ...
 
@@ -69,11 +70,13 @@ async fn main() {
     let register_user_use_case = Arc::new(RegisterUser {
         user_repo: repo.clone(),
     });
+    let create_workspace_use_case = Arc::new(CreateWorkspace::new(repo.clone()));
 
     // 5. Initialize App State
     let app_state = AppState {
         record_use_case: record_use_case.clone(),
         register_user: register_user_use_case.clone(),
+        create_workspace: create_workspace_use_case.clone(),
     };
 
     // ... seeding ...
@@ -85,6 +88,11 @@ async fn main() {
             "/register",
             get(infrastructure::web::handlers::get_register_handler)
                 .post(infrastructure::web::handlers::post_register_handler),
+        )
+        .route(
+            "/workspaces",
+            get(infrastructure::web::handlers::get_create_workspace_handler)
+                .post(infrastructure::web::handlers::post_create_workspace_handler),
         )
         .route("/cards/:id/move", axum::routing::post(move_card_handler))
         .with_state(app_state);

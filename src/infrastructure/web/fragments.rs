@@ -103,3 +103,19 @@ pub fn register_form() -> Markup {
         }
     }
 }
+
+pub fn create_workspace_form() -> Markup {
+    html! {
+        div class="max-w-md mx-auto mt-10" {
+            form hx-post="/workspaces" hx-target="#result" {
+                h2 class="text-2xl font-bold mb-4" { "Create Workspace" }
+
+                label class="block mb-2" { "Subdomain" }
+                input type="text" name="subdomain" class="border p-2 w-full mb-4" required placeholder="acme-corp";
+
+                button type="submit" class="bg-blue-500 text-white p-2 rounded" { "Create" }
+            }
+            div id="result" class="mt-4" {}
+        }
+    }
+}

@@ -1,4 +1,5 @@
-use crate::application::ports::input::RecordUseCase;
+use crate::application::ports::input::{CreateWorkspaceUseCase, RecordUseCase};
+use crate::application::use_cases::create_workspace::CreateWorkspace;
 use crate::application::use_cases::register_user::RegisterUser;
 use crate::domain::OpportunityStage;
 use axum::{
@@ -14,6 +15,7 @@ use uuid::Uuid;
 pub struct AppState {
     pub record_use_case: Arc<dyn RecordUseCase>,
     pub register_user: Arc<RegisterUser>,
+    pub create_workspace: Arc<CreateWorkspace>,
 }
 
 #[derive(Deserialize)]
@@ -25,6 +27,11 @@ pub struct MoveCardPayload {
 pub struct RegisterUserPayload {
     pub email: String,
     pub password: String,
+}
+
+#[derive(Deserialize)]
+pub struct CreateWorkspacePayload {
+    pub subdomain: String,
 }
 
 pub async fn move_card_handler(
@@ -64,11 +71,6 @@ pub async fn get_register_handler() -> impl IntoResponse {
 
 pub async fn post_register_handler(
     State(state): State<AppState>,
-    // Using simple Form extract would be better for HTML forms, but using Json as requested in plan or default
-    // Wait, HTML form usually sends x-www-form-urlencoded.
-    // Spec doesn't strictly say, but standard web app uses Form.
-    // I will use Form to support the UI I'm building.
-    // Need axum::Form
     axum::Form(payload): axum::Form<RegisterUserPayload>,
 ) -> impl IntoResponse {
     match state
@@ -80,6 +82,40 @@ pub async fn post_register_handler(
         Err(e) => {
             eprintln!("Error registering user: {:?}", e);
             "Error registering user"
+        }
+    }
+}
+
+pub async fn get_create_workspace_handler() -> impl IntoResponse {
+    crate::infrastructure::web::fragments::layout(
+        crate::infrastructure::web::fragments::create_workspace_form(),
+    )
+}
+
+pub async fn post_create_workspace_handler(
+    State(state): State<AppState>,
+    axum::Form(payload): axum::Form<CreateWorkspacePayload>,
+) -> impl IntoResponse {
+    // TEMPORARY: Create a dummy user ID to satisfy FK constraints
+    let email = format!("user-{}@example.com", Uuid::new_v4());
+    let pwd = "password";
+    let user = match state.register_user.execute(email, pwd.to_string()).await {
+        Ok(u) => u,
+        Err(e) => {
+            eprintln!("Error creating dummy user: {:?}", e);
+            return "Error creating dummy user".to_string();
+        }
+    };
+
+    match state
+        .create_workspace
+        .execute(user.id, payload.subdomain)
+        .await
+    {
+        Ok(ws) => format!("Workspace created: {}", ws.subdomain),
+        Err(e) => {
+            eprintln!("Error creating workspace: {:?}", e);
+            "Error creating workspace".to_string()
         }
     }
 }

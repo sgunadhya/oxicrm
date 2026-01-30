@@ -1,6 +1,9 @@
 use super::entities::opportunity::{self, Entity as OpportunityEntity};
-use crate::application::ports::output::OpportunityRepository;
-use crate::domain::{DomainError, Opportunity, OpportunityStage};
+use crate::application::ports::output::{
+    OpportunityRepository, UserRepository, WorkspaceRepository,
+};
+use crate::domain::{DomainError, Opportunity, OpportunityStage, User, Workspace, WorkspaceMember};
+use crate::infrastructure::persistence::entities::{user, workspace, workspace_member};
 use async_trait::async_trait;
 use sea_orm::*;
 use uuid::Uuid;
@@ -15,19 +18,17 @@ impl OpportunityRepository for SeaOrmRepo {
         let model = OpportunityEntity::find_by_id(id)
             .one(&self.db)
             .await
-            .map_err(|e| DomainError::Validation(e.to_string()))?; // Mapping DB error to validation for now
+            .map_err(|e| DomainError::Validation(e.to_string()))?;
 
         match model {
             Some(m) => {
-                // Map DB model to Domain Entity
-                // Note: In real app, handling enum parsing errors properly
                 let stage = match m.stage.as_str() {
                     "New" => OpportunityStage::New,
                     "Meeting" => OpportunityStage::Meeting,
                     "Proposal" => OpportunityStage::Proposal,
                     "Customer" => OpportunityStage::Customer,
                     "Lost" => OpportunityStage::Lost,
-                    _ => OpportunityStage::New, // Fallback
+                    _ => OpportunityStage::New,
                 };
 
                 Ok(Some(Opportunity {
@@ -37,11 +38,11 @@ impl OpportunityRepository for SeaOrmRepo {
                     amount_micros: m.amount_micros,
                     created_at: m.created_at,
                     updated_at: m.updated_at,
-                    deleted_at: None, // Not implementing soft delete in DB for scaffolding yet
-                    position: 0,      // Placeholder
-                    close_date: None, // Placeholder
-                    point_of_contact_id: None, // Placeholder
-                    company_id: None, // Placeholder
+                    deleted_at: None,
+                    position: 0,
+                    close_date: None,
+                    point_of_contact_id: None,
+                    company_id: None,
                 }))
             }
             None => Ok(None),
@@ -93,8 +94,6 @@ impl OpportunityRepository for SeaOrmRepo {
             OpportunityStage::Lost => "Lost",
         };
 
-        // Check if exists to decide insert or update
-        // Simplified usage here using ActiveModel
         let active_model = opportunity::ActiveModel {
             id: Set(opportunity.id),
             name: Set(opportunity.name.clone()),
@@ -104,12 +103,6 @@ impl OpportunityRepository for SeaOrmRepo {
             updated_at: Set(opportunity.updated_at),
         };
 
-        // For simplicity in scaffolding, using insert w/ on conflict or just simple insert for new
-        // Real implementation would check ID existence or use `save` if primary key is set
-        // SeaORM `insert` fails if PK exists. `save` checks state.
-        // Since we are creating from domain entity which has ID, we treat as "simulated upsert" or check first
-
-        // Doing a simple check first
         let exists = OpportunityEntity::find_by_id(opportunity.id)
             .one(&self.db)
             .await
@@ -132,12 +125,8 @@ impl OpportunityRepository for SeaOrmRepo {
 }
 
 #[async_trait]
-impl crate::application::ports::output::UserRepository for SeaOrmRepo {
-    async fn find_by_email(
-        &self,
-        email: &str,
-    ) -> Result<Option<crate::domain::entities::User>, DomainError> {
-        use crate::infrastructure::persistence::entities::user;
+impl UserRepository for SeaOrmRepo {
+    async fn find_by_email(&self, email: &str) -> Result<Option<User>, DomainError> {
         let model = user::Entity::find()
             .filter(user::Column::Email.eq(email))
             .one(&self.db)
@@ -146,14 +135,7 @@ impl crate::application::ports::output::UserRepository for SeaOrmRepo {
         Ok(model.map(|m| m.to_domain()))
     }
 
-    async fn create(
-        &self,
-        user: crate::domain::entities::User,
-    ) -> Result<crate::domain::entities::User, DomainError> {
-        use crate::infrastructure::persistence::entities::user;
-        use sea_orm::{ActiveModelTrait, Set};
-
-        // Convert enum to string manually or via serde
+    async fn create(&self, user: User) -> Result<User, DomainError> {
         let state_str = serde_json::to_value(user.state)
             .unwrap()
             .as_str()
@@ -173,6 +155,61 @@ impl crate::application::ports::output::UserRepository for SeaOrmRepo {
             .insert(&self.db)
             .await
             .map_err(|e| DomainError::Validation(e.to_string()))?;
+        Ok(result.to_domain())
+    }
+}
+
+#[async_trait]
+impl WorkspaceRepository for SeaOrmRepo {
+    async fn create(&self, workspace: Workspace) -> Result<Workspace, DomainError> {
+        let state_str = serde_json::to_value(workspace.state)
+            .unwrap()
+            .as_str()
+            .unwrap()
+            .to_string();
+
+        let model = workspace::ActiveModel {
+            id: Set(workspace.id),
+            subdomain: Set(workspace.subdomain),
+            state: Set(state_str),
+            created_at: Set(workspace.created_at.into()),
+            updated_at: Set(workspace.updated_at.into()),
+        };
+
+        let result = model
+            .insert(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+
+        Ok(result.to_domain())
+    }
+
+    async fn find_by_subdomain(&self, subdomain: &str) -> Result<Option<Workspace>, DomainError> {
+        let result = workspace::Entity::find()
+            .filter(workspace::Column::Subdomain.eq(subdomain))
+            .one(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+
+        Ok(result.map(|m| m.to_domain()))
+    }
+
+    async fn add_member(&self, member: WorkspaceMember) -> Result<WorkspaceMember, DomainError> {
+        let model = workspace_member::ActiveModel {
+            id: Set(member.id),
+            user_id: Set(member.user_id),
+            workspace_id: Set(member.workspace_id),
+            role: Set(member.role),
+            name: Set(member.name),
+            created_at: Set(member.created_at.into()),
+            updated_at: Set(member.updated_at.into()),
+        };
+
+        let result = model
+            .insert(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+
         Ok(result.to_domain())
     }
 }

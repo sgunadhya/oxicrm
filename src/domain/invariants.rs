@@ -11,6 +11,8 @@ pub enum DomainError {
     NotFound,
     #[error("Invalid state transition: {0}")]
     InvalidState(String),
+    #[error("Infrastructure error: {0}")]
+    InfrastructureError(String),
 }
 
 pub trait HardGuard {

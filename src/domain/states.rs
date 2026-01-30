@@ -32,6 +32,13 @@ pub enum UserState {
     Deleted,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum WorkspaceState {
+    Pending,
+    Active,
+    Suspended,
+}
+
 impl Default for TaskStatus {
     fn default() -> Self {
         Self::Todo
