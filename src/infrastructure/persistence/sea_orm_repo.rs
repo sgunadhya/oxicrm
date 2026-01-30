@@ -1,10 +1,11 @@
 use super::entities::opportunity::{self, Entity as OpportunityEntity};
 use crate::application::ports::output::{
-    CalendarEventRepository, EmailRepository, EmailTemplateRepository, OpportunityRepository, TimelineActivityRepository, UserRepository, WorkflowRepository, WorkspaceRepository,
+    CalendarEventRepository, EmailRepository, EmailTemplateRepository, LeadRepository, OpportunityRepository, TimelineActivityRepository, UserRepository, WorkflowRepository, WorkspaceRepository,
 };
 use crate::domain::{
-    CalendarEvent, DomainError, Email, EmailTemplate, Opportunity, OpportunityStage, Person, TimelineActivity, User, Workflow, Workspace, WorkspaceMember,
+    CalendarEvent, DomainError, Email, EmailTemplate, Lead, Opportunity, OpportunityStage, Person, TimelineActivity, User, Workflow, Workspace, WorkspaceMember,
 };
+use crate::domain::states::{LeadSource, LeadStatus};
 use crate::infrastructure::persistence::entities::{person, user, workspace, workspace_member};
 use async_trait::async_trait;
 use sea_orm::*;
@@ -1026,6 +1027,210 @@ impl EmailTemplateRepository for SeaOrmRepo {
         use crate::infrastructure::persistence::entities::email_template;
         email_template::Entity::delete_by_id(id)
             .exec(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl LeadRepository for SeaOrmRepo {
+    async fn find_all(&self) -> Result<Vec<Lead>, DomainError> {
+        use crate::infrastructure::persistence::entities::lead;
+        let models = lead::Entity::find()
+            .filter(lead::Column::DeletedAt.is_null())
+            .order_by_desc(lead::Column::Score)
+            .order_by_desc(lead::Column::CreatedAt)
+            .all(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+    }
+
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<Lead>, DomainError> {
+        use crate::infrastructure::persistence::entities::lead;
+        let model = lead::Entity::find_by_id(id)
+            .filter(lead::Column::DeletedAt.is_null())
+            .one(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(model.map(|m| m.to_domain()))
+    }
+
+    async fn find_by_email(&self, email: &str) -> Result<Option<Lead>, DomainError> {
+        use crate::infrastructure::persistence::entities::lead;
+        let model = lead::Entity::find()
+            .filter(lead::Column::Email.eq(email))
+            .filter(lead::Column::DeletedAt.is_null())
+            .one(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(model.map(|m| m.to_domain()))
+    }
+
+    async fn find_by_status(&self, status: LeadStatus) -> Result<Vec<Lead>, DomainError> {
+        use crate::infrastructure::persistence::entities::lead;
+        let status_str = match status {
+            LeadStatus::New => "new",
+            LeadStatus::Contacted => "contacted",
+            LeadStatus::Qualified => "qualified",
+            LeadStatus::Unqualified => "unqualified",
+            LeadStatus::Converted => "converted",
+        };
+        let models = lead::Entity::find()
+            .filter(lead::Column::Status.eq(status_str))
+            .filter(lead::Column::DeletedAt.is_null())
+            .order_by_desc(lead::Column::Score)
+            .all(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+    }
+
+    async fn find_unassigned(&self) -> Result<Vec<Lead>, DomainError> {
+        use crate::infrastructure::persistence::entities::lead;
+        let models = lead::Entity::find()
+            .filter(lead::Column::AssignedToId.is_null())
+            .filter(lead::Column::DeletedAt.is_null())
+            .order_by_desc(lead::Column::Score)
+            .all(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+    }
+
+    async fn find_by_assigned_to(&self, assigned_to_id: Uuid) -> Result<Vec<Lead>, DomainError> {
+        use crate::infrastructure::persistence::entities::lead;
+        let models = lead::Entity::find()
+            .filter(lead::Column::AssignedToId.eq(assigned_to_id))
+            .filter(lead::Column::DeletedAt.is_null())
+            .order_by_desc(lead::Column::Score)
+            .all(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+    }
+
+    async fn find_high_score(&self, min_score: i32) -> Result<Vec<Lead>, DomainError> {
+        use crate::infrastructure::persistence::entities::lead;
+        let models = lead::Entity::find()
+            .filter(lead::Column::Score.gte(min_score))
+            .filter(lead::Column::DeletedAt.is_null())
+            .order_by_desc(lead::Column::Score)
+            .all(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+    }
+
+    async fn create(&self, lead: Lead) -> Result<Lead, DomainError> {
+        use crate::infrastructure::persistence::entities::lead;
+
+        let source_str = match lead.source {
+            LeadSource::WebForm => "web_form",
+            LeadSource::ManualEntry => "manual_entry",
+            LeadSource::Email => "email",
+            LeadSource::Referral => "referral",
+        };
+
+        let status_str = match lead.status {
+            LeadStatus::New => "new",
+            LeadStatus::Contacted => "contacted",
+            LeadStatus::Qualified => "qualified",
+            LeadStatus::Unqualified => "unqualified",
+            LeadStatus::Converted => "converted",
+        };
+
+        let model = lead::ActiveModel {
+            id: Set(lead.id),
+            created_at: Set(lead.created_at.into()),
+            updated_at: Set(lead.updated_at.into()),
+            deleted_at: Set(None),
+            first_name: Set(lead.first_name),
+            last_name: Set(lead.last_name),
+            email: Set(lead.email),
+            phone: Set(lead.phone),
+            company_name: Set(lead.company_name),
+            job_title: Set(lead.job_title),
+            source: Set(source_str.to_string()),
+            status: Set(status_str.to_string()),
+            score: Set(lead.score),
+            notes: Set(lead.notes),
+            position: Set(lead.position),
+            assigned_to_id: Set(lead.assigned_to_id),
+            converted_person_id: Set(lead.converted_person_id),
+            converted_company_id: Set(lead.converted_company_id),
+            converted_opportunity_id: Set(lead.converted_opportunity_id),
+            converted_at: Set(lead.converted_at.map(|d| d.into())),
+            last_contacted_at: Set(lead.last_contacted_at.map(|d| d.into())),
+        };
+
+        let result = model
+            .insert(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(result.to_domain())
+    }
+
+    async fn update(&self, lead: Lead) -> Result<Lead, DomainError> {
+        use crate::infrastructure::persistence::entities::lead;
+
+        let source_str = match lead.source {
+            LeadSource::WebForm => "web_form",
+            LeadSource::ManualEntry => "manual_entry",
+            LeadSource::Email => "email",
+            LeadSource::Referral => "referral",
+        };
+
+        let status_str = match lead.status {
+            LeadStatus::New => "new",
+            LeadStatus::Contacted => "contacted",
+            LeadStatus::Qualified => "qualified",
+            LeadStatus::Unqualified => "unqualified",
+            LeadStatus::Converted => "converted",
+        };
+
+        let model = lead::ActiveModel {
+            id: Set(lead.id),
+            created_at: Set(lead.created_at.into()),
+            updated_at: Set(lead.updated_at.into()),
+            deleted_at: Set(lead.deleted_at.map(|d| d.into())),
+            first_name: Set(lead.first_name),
+            last_name: Set(lead.last_name),
+            email: Set(lead.email),
+            phone: Set(lead.phone),
+            company_name: Set(lead.company_name),
+            job_title: Set(lead.job_title),
+            source: Set(source_str.to_string()),
+            status: Set(status_str.to_string()),
+            score: Set(lead.score),
+            notes: Set(lead.notes),
+            position: Set(lead.position),
+            assigned_to_id: Set(lead.assigned_to_id),
+            converted_person_id: Set(lead.converted_person_id),
+            converted_company_id: Set(lead.converted_company_id),
+            converted_opportunity_id: Set(lead.converted_opportunity_id),
+            converted_at: Set(lead.converted_at.map(|d| d.into())),
+            last_contacted_at: Set(lead.last_contacted_at.map(|d| d.into())),
+        };
+
+        let result = model
+            .update(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(result.to_domain())
+    }
+
+    async fn delete(&self, id: Uuid) -> Result<(), DomainError> {
+        use crate::infrastructure::persistence::entities::lead;
+        // Soft delete
+        let model = lead::ActiveModel {
+            id: Set(id),
+            deleted_at: Set(Some(chrono::Utc::now().into())),
+            ..Default::default()
+        };
+        model
+            .update(&self.db)
             .await
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
         Ok(())

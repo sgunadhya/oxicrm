@@ -1,4 +1,5 @@
-use crate::domain::{CalendarEvent, CalendarEventParticipant, Company, ConnectedAccount, DomainError, Email, EmailTemplate, Note, Opportunity, Person, Task, TaskTarget, TimelineActivity, User, Workflow, WorkflowVersion, WorkflowVersionStep, WorkflowRun, Workspace, WorkspaceMember};
+use crate::domain::{CalendarEvent, CalendarEventParticipant, Company, ConnectedAccount, DomainError, Email, EmailTemplate, Lead, Note, Opportunity, Person, Task, TaskTarget, TimelineActivity, User, Workflow, WorkflowVersion, WorkflowVersionStep, WorkflowRun, Workspace, WorkspaceMember};
+use crate::domain::states::{LeadStatus};
 use async_trait::async_trait;
 
 #[async_trait]
@@ -154,5 +155,19 @@ pub trait EmailTemplateRepository: Send + Sync {
     async fn find_by_name(&self, name: &str) -> Result<Option<EmailTemplate>, DomainError>;
     async fn create(&self, template: EmailTemplate) -> Result<EmailTemplate, DomainError>;
     async fn update(&self, template: EmailTemplate) -> Result<EmailTemplate, DomainError>;
+    async fn delete(&self, id: uuid::Uuid) -> Result<(), DomainError>;
+}
+
+#[async_trait]
+pub trait LeadRepository: Send + Sync {
+    async fn find_all(&self) -> Result<Vec<Lead>, DomainError>;
+    async fn find_by_id(&self, id: uuid::Uuid) -> Result<Option<Lead>, DomainError>;
+    async fn find_by_email(&self, email: &str) -> Result<Option<Lead>, DomainError>;
+    async fn find_by_status(&self, status: LeadStatus) -> Result<Vec<Lead>, DomainError>;
+    async fn find_unassigned(&self) -> Result<Vec<Lead>, DomainError>;
+    async fn find_by_assigned_to(&self, assigned_to_id: uuid::Uuid) -> Result<Vec<Lead>, DomainError>;
+    async fn find_high_score(&self, min_score: i32) -> Result<Vec<Lead>, DomainError>;
+    async fn create(&self, lead: Lead) -> Result<Lead, DomainError>;
+    async fn update(&self, lead: Lead) -> Result<Lead, DomainError>;
     async fn delete(&self, id: uuid::Uuid) -> Result<(), DomainError>;
 }

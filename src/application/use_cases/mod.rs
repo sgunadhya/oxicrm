@@ -24,4 +24,8 @@ pub mod send_email;
 pub mod receive_email;
 pub mod manage_email_template;
 
+pub mod create_lead;
+pub mod convert_lead;
+pub mod manage_lead;
+
 pub use record_board_card::RecordBoardCard;

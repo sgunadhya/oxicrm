@@ -121,3 +121,43 @@ impl Default for EmailStatus {
         Self::Pending
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum LeadSource {
+    WebForm,
+    ManualEntry,
+    Email,
+    Referral,
+}
+
+impl Default for LeadSource {
+    fn default() -> Self {
+        Self::ManualEntry
+    }
+}
+
+impl LeadSource {
+    pub fn to_string(&self) -> &str {
+        match self {
+            Self::WebForm => "web_form",
+            Self::ManualEntry => "manual_entry",
+            Self::Email => "email",
+            Self::Referral => "referral",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum LeadStatus {
+    New,
+    Contacted,
+    Qualified,
+    Unqualified,
+    Converted,
+}
+
+impl Default for LeadStatus {
+    fn default() -> Self {
+        Self::New
+    }
+}

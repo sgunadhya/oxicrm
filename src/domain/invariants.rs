@@ -1,4 +1,4 @@
-use super::entities::{Email, EmailTemplate, Person};
+use super::entities::{Email, EmailTemplate, Lead, Person};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -94,6 +94,27 @@ impl HardGuard for Email {
             }
         }
 
+        Ok(())
+    }
+}
+
+impl HardGuard for Lead {
+    fn validate(&self) -> Result<(), DomainError> {
+        if self.first_name.trim().is_empty() {
+            return Err(DomainError::Validation("First name cannot be empty".into()));
+        }
+        if self.last_name.trim().is_empty() {
+            return Err(DomainError::Validation("Last name cannot be empty".into()));
+        }
+        if !self.email.contains('@') {
+            return Err(DomainError::Validation(format!(
+                "Invalid email: {}",
+                self.email
+            )));
+        }
+        if self.score < 0 || self.score > 100 {
+            return Err(DomainError::Validation("Score must be between 0 and 100".into()));
+        }
         Ok(())
     }
 }

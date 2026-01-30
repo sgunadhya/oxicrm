@@ -113,6 +113,12 @@ async fn main() {
     use application::workflow::executor::WorkflowExecutor;
     use infrastructure::email::{MockEmailProvider, SimpleTemplateEngine};
 
+    // Lead System Initialization
+    use application::events::lead_subscriber::LeadEventSubscriber;
+    use application::use_cases::convert_lead::ConvertLead;
+    use application::use_cases::create_lead::CreateLead;
+    use application::use_cases::manage_lead::ManageLead;
+
     let email_provider = Arc::new(MockEmailProvider::new());
     let template_engine = Arc::new(SimpleTemplateEngine::new());
 
@@ -145,6 +151,30 @@ async fn main() {
         .start()
         .await
         .expect("Failed to start email event subscriber");
+
+    // Initialize lead use cases
+    let create_lead_use_case = Arc::new(CreateLead::new(repo.clone(), event_bus.clone()));
+
+    let manage_lead_use_case = Arc::new(ManageLead::new(repo.clone(), repo.clone()));
+
+    let convert_lead_use_case = Arc::new(ConvertLead::new(
+        repo.clone(),
+        repo.clone(),
+        repo.clone(),
+        repo.clone(),
+        repo.clone(),
+    ));
+
+    // Start lead event subscriber
+    let lead_subscriber = Arc::new(LeadEventSubscriber::new(
+        event_bus.clone(),
+        send_email_use_case.clone(),
+        repo.clone(),
+    ));
+    lead_subscriber
+        .start()
+        .await
+        .expect("Failed to start lead event subscriber");
 
     // Start job worker
     let (email_job_sender, email_job_receiver) = mpsc::channel(100);
@@ -354,8 +384,44 @@ async fn main() {
         )
         .with_state(email_app_state);
 
+    // Lead System Routes
+    use infrastructure::web::lead_handlers::{
+        convert_lead_handler, create_lead_handler, delete_lead_handler, get_lead_handler,
+        lead_capture_webhook_handler, list_leads_handler, update_lead_status_handler,
+        LeadAppState,
+    };
+
+    let lead_app_state = LeadAppState {
+        create_lead: create_lead_use_case.clone(),
+        manage_lead: manage_lead_use_case.clone(),
+        convert_lead: convert_lead_use_case.clone(),
+        lead_repo: repo.clone(),
+    };
+
+    let lead_router = Router::new()
+        .route("/api/leads", axum::routing::post(create_lead_handler))
+        .route("/api/leads", axum::routing::get(list_leads_handler))
+        .route("/api/leads/:id", axum::routing::get(get_lead_handler))
+        .route(
+            "/api/leads/:id",
+            axum::routing::delete(delete_lead_handler),
+        )
+        .route(
+            "/api/leads/:id/convert",
+            axum::routing::post(convert_lead_handler),
+        )
+        .route(
+            "/api/leads/:id/status",
+            axum::routing::put(update_lead_status_handler),
+        )
+        .route(
+            "/webhooks/lead-capture",
+            axum::routing::post(lead_capture_webhook_handler),
+        )
+        .with_state(lead_app_state);
+
     // Merge routers
-    let app = app.merge(email_router);
+    let app = app.merge(email_router).merge(lead_router);
 
     let listener = TcpListener::bind("0.0.0.0:3001").await.unwrap();
     println!("Listening on {}", listener.local_addr().unwrap());

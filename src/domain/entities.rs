@@ -1,4 +1,4 @@
-use super::states::{ConnectedAccountStatus, EmailDirection, EmailStatus, OpportunityStage, TaskStatus, UserState, WorkspaceState, WorkflowVersionStatus, WorkflowRunStatus, WorkflowStepType};
+use super::states::{ConnectedAccountStatus, EmailDirection, EmailStatus, LeadSource, LeadStatus, OpportunityStage, TaskStatus, UserState, WorkspaceState, WorkflowVersionStatus, WorkflowRunStatus, WorkflowStepType};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -253,4 +253,56 @@ pub struct Email {
     pub workflow_id: Option<Uuid>,
     pub workflow_run_id: Option<Uuid>,
     pub metadata: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Lead {
+    pub id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
+    pub first_name: String,
+    pub last_name: String,
+    pub email: String,
+    pub phone: Option<String>,
+    pub company_name: Option<String>,
+    pub job_title: Option<String>,
+    pub source: LeadSource,
+    pub status: LeadStatus,
+    pub score: i32,
+    pub notes: Option<String>,
+    pub position: i32,
+    pub assigned_to_id: Option<Uuid>,
+    pub converted_person_id: Option<Uuid>,
+    pub converted_company_id: Option<Uuid>,
+    pub converted_opportunity_id: Option<Uuid>,
+    pub converted_at: Option<DateTime<Utc>>,
+    pub last_contacted_at: Option<DateTime<Utc>>,
+}
+
+impl Lead {
+    pub fn full_name(&self) -> String {
+        format!("{} {}", self.first_name, self.last_name)
+    }
+
+    pub fn calculate_score(&self) -> i32 {
+        let mut score = 0;
+        if !self.email.is_empty() {
+            score += 10;
+        }
+        if self.phone.is_some() {
+            score += 30;
+        }
+        if self.company_name.is_some() {
+            score += 20;
+        }
+        if self.job_title.is_some() {
+            score += 15;
+        }
+        score
+    }
+
+    pub fn is_converted(&self) -> bool {
+        self.status == LeadStatus::Converted
+    }
 }
