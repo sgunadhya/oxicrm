@@ -348,10 +348,43 @@ impl MigrationTrait for InitialSchema {
                     )
                     .to_owned(),
             )
+            .await?;
+
+        // TimelineActivity Table (immutable polymorphic activity log)
+        manager
+            .create_table(
+                Table::create()
+                    .table(TimelineActivity::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new(TimelineActivity::Id)
+                            .uuid()
+                            .not_null()
+                            .primary_key(),
+                    )
+                    .col(ColumnDef::new(TimelineActivity::Name).string().not_null())
+                    .col(
+                        ColumnDef::new(TimelineActivity::CreatedAt)
+                            .timestamp_with_time_zone()
+                            .not_null(),
+                    )
+                    .col(ColumnDef::new(TimelineActivity::WorkspaceMemberId).uuid())
+                    .col(ColumnDef::new(TimelineActivity::PersonId).uuid())
+                    .col(ColumnDef::new(TimelineActivity::CompanyId).uuid())
+                    .col(ColumnDef::new(TimelineActivity::OpportunityId).uuid())
+                    .col(ColumnDef::new(TimelineActivity::TaskId).uuid())
+                    .col(ColumnDef::new(TimelineActivity::NoteId).uuid())
+                    .col(ColumnDef::new(TimelineActivity::CalendarEventId).uuid())
+                    .col(ColumnDef::new(TimelineActivity::WorkflowId).uuid())
+                    .to_owned(),
+            )
             .await
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        manager
+            .drop_table(Table::drop().table(TimelineActivity::Table).to_owned())
+            .await?;
         manager
             .drop_table(Table::drop().table(CalendarEventParticipant::Table).to_owned())
             .await?;
@@ -530,4 +563,20 @@ enum CalendarEventParticipant {
     Email,
     PersonId,
     CreatedAt,
+}
+
+#[derive(Iden)]
+enum TimelineActivity {
+    Table,
+    Id,
+    Name,
+    CreatedAt,
+    WorkspaceMemberId,
+    PersonId,
+    CompanyId,
+    OpportunityId,
+    TaskId,
+    NoteId,
+    CalendarEventId,
+    WorkflowId,
 }

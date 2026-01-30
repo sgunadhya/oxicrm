@@ -1,4 +1,4 @@
-use crate::domain::{Opportunity, OpportunityStage, Person};
+use crate::domain::{Opportunity, OpportunityStage, Person, TimelineActivity};
 use maud::{html, Markup, DOCTYPE};
 
 pub fn layout(content: Markup) -> Markup {
@@ -618,6 +618,105 @@ pub fn calendar_event_form() -> Markup {
 
                 div class="flex justify-between items-center" {
                      a href="/calendar-events" class="text-gray-500" { "Cancel" }
+                     button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded" { "Save" }
+                }
+            }
+        }
+    }
+}
+
+pub fn timeline_activity_list(activities: &[TimelineActivity]) -> Markup {
+    html! {
+        div class="max-w-6xl mx-auto mt-10" {
+            div class="flex justify-between items-center mb-6" {
+                 h2 class="text-2xl font-bold" { "Timeline Activities" }
+                 a href="/timeline-activities/new" class="bg-blue-500 text-white px-4 py-2 rounded" { "Add Activity" }
+            }
+
+            table class="min-w-full bg-white border" {
+                thead {
+                    tr {
+                        th class="p-4 border-b text-left" { "Activity" }
+                        th class="p-4 border-b text-left" { "Related Entity" }
+                        th class="p-4 border-b text-left" { "Created" }
+                        th class="p-4 border-b text-left" { "Actions" }
+                    }
+                }
+                tbody {
+                    @for activity in activities {
+                        tr class="hover:bg-gray-50" {
+                            td class="p-4 border-b" { (activity.name) }
+                            td class="p-4 border-b" {
+                                @if activity.person_id.is_some() {
+                                    span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs" { "Person" }
+                                } @else if activity.company_id.is_some() {
+                                    span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs" { "Company" }
+                                } @else if activity.opportunity_id.is_some() {
+                                    span class="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs" { "Opportunity" }
+                                } @else if activity.task_id.is_some() {
+                                    span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs" { "Task" }
+                                } @else if activity.note_id.is_some() {
+                                    span class="bg-pink-100 text-pink-800 px-2 py-1 rounded text-xs" { "Note" }
+                                } @else if activity.calendar_event_id.is_some() {
+                                    span class="bg-indigo-100 text-indigo-800 px-2 py-1 rounded text-xs" { "Calendar Event" }
+                                } @else if activity.workflow_id.is_some() {
+                                    span class="bg-red-100 text-red-800 px-2 py-1 rounded text-xs" { "Workflow" }
+                                } @else {
+                                    span class="bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs" { "None" }
+                                }
+                            }
+                            td class="p-4 border-b" { (activity.created_at.format("%Y-%m-%d %H:%M").to_string()) }
+                            td class="p-4 border-b" {
+                                button
+                                    hx-delete=(format!("/timeline-activities/{}", activity.id))
+                                    hx-target="closest tr"
+                                    hx-swap="outerHTML"
+                                    class="text-red-500 hover:text-red-700"
+                                { "Delete" }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+pub fn timeline_activity_form() -> Markup {
+    html! {
+        div class="max-w-md mx-auto mt-10" {
+            form hx-post="/timeline-activities" hx-target="body" {
+                h2 class="text-2xl font-bold mb-4" { "Add New Timeline Activity" }
+
+                label class="block mb-2" { "Activity Name *" }
+                input type="text" name="name" class="border p-2 w-full mb-4" placeholder="e.g., Called customer, Sent proposal" required;
+
+                label class="block mb-2" { "Related Entity (Optional)" }
+                p class="text-sm text-gray-600 mb-2" { "You can link this activity to a specific entity by providing its ID" }
+
+                label class="block mb-2 text-sm" { "Person ID" }
+                input type="text" name="person_id" class="border p-2 w-full mb-3" placeholder="UUID (optional)";
+
+                label class="block mb-2 text-sm" { "Company ID" }
+                input type="text" name="company_id" class="border p-2 w-full mb-3" placeholder="UUID (optional)";
+
+                label class="block mb-2 text-sm" { "Opportunity ID" }
+                input type="text" name="opportunity_id" class="border p-2 w-full mb-3" placeholder="UUID (optional)";
+
+                label class="block mb-2 text-sm" { "Task ID" }
+                input type="text" name="task_id" class="border p-2 w-full mb-3" placeholder="UUID (optional)";
+
+                label class="block mb-2 text-sm" { "Note ID" }
+                input type="text" name="note_id" class="border p-2 w-full mb-3" placeholder="UUID (optional)";
+
+                label class="block mb-2 text-sm" { "Calendar Event ID" }
+                input type="text" name="calendar_event_id" class="border p-2 w-full mb-3" placeholder="UUID (optional)";
+
+                label class="block mb-2 text-sm" { "Workflow ID" }
+                input type="text" name="workflow_id" class="border p-2 w-full mb-4" placeholder="UUID (optional)";
+
+                div class="flex justify-between items-center" {
+                     a href="/timeline-activities" class="text-gray-500" { "Cancel" }
                      button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded" { "Save" }
                 }
             }

@@ -1,9 +1,9 @@
 use super::entities::opportunity::{self, Entity as OpportunityEntity};
 use crate::application::ports::output::{
-    CalendarEventRepository, NoteRepository, OpportunityRepository, TaskRepository, TaskTargetRepository, UserRepository, WorkflowRepository, WorkspaceRepository,
+    CalendarEventRepository, NoteRepository, OpportunityRepository, TaskRepository, TaskTargetRepository, TimelineActivityRepository, UserRepository, WorkflowRepository, WorkspaceRepository,
 };
 use crate::domain::{
-    CalendarEvent, DomainError, Note, Opportunity, OpportunityStage, Person, Task, TaskTarget, User, Workflow, Workspace, WorkspaceMember,
+    CalendarEvent, DomainError, Note, Opportunity, OpportunityStage, Person, Task, TaskTarget, TimelineActivity, User, Workflow, Workspace, WorkspaceMember,
 };
 use crate::infrastructure::persistence::entities::{person, user, workspace, workspace_member};
 use async_trait::async_trait;
@@ -664,6 +664,95 @@ impl CalendarEventRepository for SeaOrmRepo {
     async fn delete(&self, id: Uuid) -> Result<(), DomainError> {
         use crate::infrastructure::persistence::entities::calendar_event;
         calendar_event::Entity::delete_by_id(id)
+            .exec(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl TimelineActivityRepository for SeaOrmRepo {
+    async fn find_all(&self) -> Result<Vec<TimelineActivity>, DomainError> {
+        use crate::infrastructure::persistence::entities::timeline_activity;
+        let models = timeline_activity::Entity::find()
+            .order_by_desc(timeline_activity::Column::CreatedAt)
+            .all(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+    }
+
+    async fn find_by_person_id(&self, person_id: Uuid) -> Result<Vec<TimelineActivity>, DomainError> {
+        use crate::infrastructure::persistence::entities::timeline_activity;
+        let models = timeline_activity::Entity::find()
+            .filter(timeline_activity::Column::PersonId.eq(person_id))
+            .order_by_desc(timeline_activity::Column::CreatedAt)
+            .all(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+    }
+
+    async fn find_by_company_id(&self, company_id: Uuid) -> Result<Vec<TimelineActivity>, DomainError> {
+        use crate::infrastructure::persistence::entities::timeline_activity;
+        let models = timeline_activity::Entity::find()
+            .filter(timeline_activity::Column::CompanyId.eq(company_id))
+            .order_by_desc(timeline_activity::Column::CreatedAt)
+            .all(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+    }
+
+    async fn find_by_opportunity_id(&self, opportunity_id: Uuid) -> Result<Vec<TimelineActivity>, DomainError> {
+        use crate::infrastructure::persistence::entities::timeline_activity;
+        let models = timeline_activity::Entity::find()
+            .filter(timeline_activity::Column::OpportunityId.eq(opportunity_id))
+            .order_by_desc(timeline_activity::Column::CreatedAt)
+            .all(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+    }
+
+    async fn find_by_task_id(&self, task_id: Uuid) -> Result<Vec<TimelineActivity>, DomainError> {
+        use crate::infrastructure::persistence::entities::timeline_activity;
+        let models = timeline_activity::Entity::find()
+            .filter(timeline_activity::Column::TaskId.eq(task_id))
+            .order_by_desc(timeline_activity::Column::CreatedAt)
+            .all(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+    }
+
+    async fn create(&self, activity: TimelineActivity) -> Result<TimelineActivity, DomainError> {
+        use crate::infrastructure::persistence::entities::timeline_activity;
+        let model = timeline_activity::ActiveModel {
+            id: Set(activity.id),
+            created_at: Set(activity.created_at.into()),
+            name: Set(activity.name),
+            workspace_member_id: Set(activity.workspace_member_id),
+            person_id: Set(activity.person_id),
+            company_id: Set(activity.company_id),
+            opportunity_id: Set(activity.opportunity_id),
+            task_id: Set(activity.task_id),
+            note_id: Set(activity.note_id),
+            calendar_event_id: Set(activity.calendar_event_id),
+            workflow_id: Set(activity.workflow_id),
+        };
+
+        let result = model
+            .insert(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(result.to_domain())
+    }
+
+    async fn delete(&self, id: Uuid) -> Result<(), DomainError> {
+        use crate::infrastructure::persistence::entities::timeline_activity;
+        timeline_activity::Entity::delete_by_id(id)
             .exec(&self.db)
             .await
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;

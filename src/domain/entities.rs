@@ -199,3 +199,18 @@ pub struct CalendarEventParticipant {
     pub email: String,
     pub person_id: Option<Uuid>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TimelineActivity {
+    pub id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub name: String,
+    pub workspace_member_id: Option<Uuid>,
+    pub person_id: Option<Uuid>,
+    pub company_id: Option<Uuid>,
+    pub opportunity_id: Option<Uuid>,
+    pub task_id: Option<Uuid>,
+    pub note_id: Option<Uuid>,
+    pub calendar_event_id: Option<Uuid>,
+    pub workflow_id: Option<Uuid>,
+}

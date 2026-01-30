@@ -15,6 +15,8 @@ pub mod create_workflow;
 pub mod manage_workflow;
 pub mod create_calendar_event;
 pub mod manage_calendar_event;
+pub mod create_timeline_activity;
+pub mod manage_timeline_activity;
 pub mod record_board_card;
 pub mod register_user;
 

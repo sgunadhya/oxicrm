@@ -1,4 +1,4 @@
-use crate::domain::{CalendarEvent, CalendarEventParticipant, Company, ConnectedAccount, DomainError, Note, Opportunity, Person, Task, TaskTarget, User, Workflow, WorkflowVersion, WorkflowVersionStep, WorkflowRun, Workspace, WorkspaceMember};
+use crate::domain::{CalendarEvent, CalendarEventParticipant, Company, ConnectedAccount, DomainError, Note, Opportunity, Person, Task, TaskTarget, TimelineActivity, User, Workflow, WorkflowVersion, WorkflowVersionStep, WorkflowRun, Workspace, WorkspaceMember};
 use async_trait::async_trait;
 
 #[async_trait]
@@ -120,5 +120,16 @@ pub trait CalendarEventRepository: Send + Sync {
 pub trait CalendarEventParticipantRepository: Send + Sync {
     async fn find_by_event_id(&self, event_id: uuid::Uuid) -> Result<Vec<CalendarEventParticipant>, DomainError>;
     async fn create(&self, participant: CalendarEventParticipant) -> Result<CalendarEventParticipant, DomainError>;
+    async fn delete(&self, id: uuid::Uuid) -> Result<(), DomainError>;
+}
+
+#[async_trait]
+pub trait TimelineActivityRepository: Send + Sync {
+    async fn find_all(&self) -> Result<Vec<TimelineActivity>, DomainError>;
+    async fn find_by_person_id(&self, person_id: uuid::Uuid) -> Result<Vec<TimelineActivity>, DomainError>;
+    async fn find_by_company_id(&self, company_id: uuid::Uuid) -> Result<Vec<TimelineActivity>, DomainError>;
+    async fn find_by_opportunity_id(&self, opportunity_id: uuid::Uuid) -> Result<Vec<TimelineActivity>, DomainError>;
+    async fn find_by_task_id(&self, task_id: uuid::Uuid) -> Result<Vec<TimelineActivity>, DomainError>;
+    async fn create(&self, activity: TimelineActivity) -> Result<TimelineActivity, DomainError>;
     async fn delete(&self, id: uuid::Uuid) -> Result<(), DomainError>;
 }

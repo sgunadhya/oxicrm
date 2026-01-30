@@ -65,6 +65,7 @@ async fn main() {
     use application::use_cases::create_opportunity::CreateOpportunity;
     use application::use_cases::create_person::CreatePerson;
     use application::use_cases::create_task::CreateTask;
+    use application::use_cases::create_timeline_activity::CreateTimelineActivity;
     use application::use_cases::create_workflow::CreateWorkflow;
     use application::use_cases::create_workspace::CreateWorkspace;
     use application::use_cases::manage_calendar_event::ManageCalendarEvent;
@@ -73,6 +74,7 @@ async fn main() {
     use application::use_cases::manage_opportunity::ManageOpportunity;
     use application::use_cases::manage_person::ManagePerson;
     use application::use_cases::manage_task::ManageTask;
+    use application::use_cases::manage_timeline_activity::ManageTimelineActivity;
     use application::use_cases::manage_workflow::ManageWorkflow;
     use application::use_cases::register_user::RegisterUser;
     // ... imports ...
@@ -99,6 +101,8 @@ async fn main() {
     let manage_workflow_use_case = Arc::new(ManageWorkflow::new(repo.clone()));
     let create_calendar_event_use_case = Arc::new(CreateCalendarEvent::new(repo.clone()));
     let manage_calendar_event_use_case = Arc::new(ManageCalendarEvent::new(repo.clone()));
+    let create_timeline_activity_use_case = Arc::new(CreateTimelineActivity::new(repo.clone()));
+    let manage_timeline_activity_use_case = Arc::new(ManageTimelineActivity::new(repo.clone()));
 
     // 5. Initialize App State
     let app_state = AppState {
@@ -126,6 +130,9 @@ async fn main() {
         create_calendar_event: create_calendar_event_use_case.clone(),
         manage_calendar_event: manage_calendar_event_use_case.clone(),
         calendar_event_repo: repo.clone(),
+        create_timeline_activity: create_timeline_activity_use_case.clone(),
+        manage_timeline_activity: manage_timeline_activity_use_case.clone(),
+        timeline_activity_repo: repo.clone(),
     };
 
     // ... seeding ...

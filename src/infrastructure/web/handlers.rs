@@ -1,11 +1,12 @@
 use crate::application::ports::input::{CreateWorkspaceUseCase, RecordUseCase};
-use crate::application::ports::output::{CalendarEventRepository, CompanyRepository, NoteRepository, OpportunityRepository, PersonRepository, TaskRepository, WorkflowRepository};
+use crate::application::ports::output::{CalendarEventRepository, CompanyRepository, NoteRepository, OpportunityRepository, PersonRepository, TaskRepository, TimelineActivityRepository, WorkflowRepository};
 use crate::application::use_cases::create_company::CreateCompany;
 use crate::application::use_cases::create_note::CreateNote;
 use crate::application::use_cases::create_opportunity::CreateOpportunity;
 use crate::application::use_cases::create_person::CreatePerson;
 use crate::application::use_cases::create_task::CreateTask;
 use crate::application::use_cases::create_calendar_event::CreateCalendarEvent;
+use crate::application::use_cases::create_timeline_activity::CreateTimelineActivity;
 use crate::application::use_cases::create_workflow::CreateWorkflow;
 use crate::application::use_cases::create_workspace::CreateWorkspace;
 use crate::application::use_cases::manage_company::ManageCompany;
@@ -14,6 +15,7 @@ use crate::application::use_cases::manage_opportunity::ManageOpportunity;
 use crate::application::use_cases::manage_person::ManagePerson;
 use crate::application::use_cases::manage_task::ManageTask;
 use crate::application::use_cases::manage_calendar_event::ManageCalendarEvent;
+use crate::application::use_cases::manage_timeline_activity::ManageTimelineActivity;
 use crate::application::use_cases::manage_workflow::ManageWorkflow;
 use crate::application::use_cases::register_user::RegisterUser;
 use crate::domain::OpportunityStage;
@@ -52,6 +54,9 @@ pub struct AppState {
     pub create_calendar_event: Arc<CreateCalendarEvent>,
     pub manage_calendar_event: Arc<ManageCalendarEvent>,
     pub calendar_event_repo: Arc<dyn CalendarEventRepository>,
+    pub create_timeline_activity: Arc<CreateTimelineActivity>,
+    pub manage_timeline_activity: Arc<ManageTimelineActivity>,
+    pub timeline_activity_repo: Arc<dyn TimelineActivityRepository>,
 }
 
 #[derive(Deserialize)]
@@ -617,6 +622,80 @@ pub async fn delete_calendar_event_handler(
         Err(e) => {
             eprintln!("Error deleting calendar event: {:?}", e);
             "Error deleting calendar event"
+        }
+    }
+}
+
+// TimelineActivity handlers
+#[derive(Deserialize)]
+pub struct CreateTimelineActivityPayload {
+    pub name: String,
+    pub workspace_member_id: Option<Uuid>,
+    pub person_id: Option<Uuid>,
+    pub company_id: Option<Uuid>,
+    pub opportunity_id: Option<Uuid>,
+    pub task_id: Option<Uuid>,
+    pub note_id: Option<Uuid>,
+    pub calendar_event_id: Option<Uuid>,
+    pub workflow_id: Option<Uuid>,
+}
+
+pub async fn get_timeline_activities_handler(State(state): State<AppState>) -> impl IntoResponse {
+    let activities = state.timeline_activity_repo.find_all().await.unwrap_or(vec![]);
+    crate::infrastructure::web::fragments::layout(
+        crate::infrastructure::web::fragments::timeline_activity_list(&activities),
+    )
+}
+
+pub async fn get_create_timeline_activity_handler() -> impl IntoResponse {
+    crate::infrastructure::web::fragments::layout(
+        crate::infrastructure::web::fragments::timeline_activity_form(),
+    )
+}
+
+pub async fn post_create_timeline_activity_handler(
+    State(state): State<AppState>,
+    axum::Form(payload): axum::Form<CreateTimelineActivityPayload>,
+) -> impl IntoResponse {
+    match state
+        .create_timeline_activity
+        .execute(
+            crate::application::use_cases::create_timeline_activity::CreateTimelineActivityInput {
+                name: payload.name,
+                workspace_member_id: payload.workspace_member_id,
+                person_id: payload.person_id,
+                company_id: payload.company_id,
+                opportunity_id: payload.opportunity_id,
+                task_id: payload.task_id,
+                note_id: payload.note_id,
+                calendar_event_id: payload.calendar_event_id,
+                workflow_id: payload.workflow_id,
+            },
+        )
+        .await
+    {
+        Ok(_) => {
+            let activities = state.timeline_activity_repo.find_all().await.unwrap_or(vec![]);
+            crate::infrastructure::web::fragments::layout(
+                crate::infrastructure::web::fragments::timeline_activity_list(&activities),
+            )
+        }
+        Err(e) => {
+            eprintln!("Error creating timeline activity: {:?}", e);
+            maud::html! { (format!("Error: {:?}", e)) }
+        }
+    }
+}
+
+pub async fn delete_timeline_activity_handler(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> impl IntoResponse {
+    match state.manage_timeline_activity.delete(id).await {
+        Ok(_) => "",
+        Err(e) => {
+            eprintln!("Error deleting timeline activity: {:?}", e);
+            "Error deleting timeline activity"
         }
     }
 }

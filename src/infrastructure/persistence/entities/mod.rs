@@ -5,6 +5,7 @@ pub mod opportunity;
 pub mod person;
 pub mod task;
 pub mod task_target;
+pub mod timeline_activity;
 pub mod user;
 pub mod workflow;
 pub mod workspace;
