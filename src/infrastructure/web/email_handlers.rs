@@ -89,6 +89,7 @@ pub async fn send_email_handler(
         task_id: payload.task_id,
         workflow_id: payload.workflow_id,
         workflow_run_id: payload.workflow_run_id,
+        workspace_id: Uuid::default(), // TODO: Get from auth context
     };
 
     match state.send_email.execute(input).await {
@@ -159,9 +160,7 @@ pub async fn inbound_email_webhook_handler(
 }
 
 // GET /api/email-templates - List all email templates
-pub async fn list_email_templates_handler(
-    State(state): State<EmailAppState>,
-) -> impl IntoResponse {
+pub async fn list_email_templates_handler(State(state): State<EmailAppState>) -> impl IntoResponse {
     match state.manage_email_template.list().await {
         Ok(templates) => {
             let response: Vec<EmailTemplateResponse> = templates

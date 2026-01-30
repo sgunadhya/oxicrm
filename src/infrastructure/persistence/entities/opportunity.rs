@@ -17,6 +17,7 @@ pub struct Model {
     pub company_id: Option<Uuid>,
     pub point_of_contact_id: Option<Uuid>,
     pub owner_id: Option<Uuid>,
+    pub workspace_id: Uuid,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -51,6 +52,7 @@ impl Model {
             point_of_contact_id: self.point_of_contact_id,
             company_id: self.company_id,
             owner_id: self.owner_id,
+            workspace_id: self.workspace_id,
         }
     }
 }

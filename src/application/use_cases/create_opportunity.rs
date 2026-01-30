@@ -15,6 +15,7 @@ pub struct CreateOpportunityInput {
     pub company_id: Option<Uuid>,
     pub point_of_contact_id: Option<Uuid>,
     pub owner_id: Option<Uuid>,
+    pub workspace_id: Uuid,
 }
 
 pub struct CreateOpportunity {
@@ -26,10 +27,7 @@ impl CreateOpportunity {
         Self { opportunity_repo }
     }
 
-    pub async fn execute(
-        &self,
-        input: CreateOpportunityInput,
-    ) -> Result<Opportunity, DomainError> {
+    pub async fn execute(&self, input: CreateOpportunityInput) -> Result<Opportunity, DomainError> {
         // Parse stage from string or default to Prospecting
         let stage = if let Some(stage_str) = input.stage {
             match stage_str.as_str() {
@@ -58,6 +56,7 @@ impl CreateOpportunity {
             point_of_contact_id: input.point_of_contact_id,
             owner_id: input.owner_id,
             position: 0,
+            workspace_id: input.workspace_id,
         };
 
         self.opportunity_repo.create(opportunity).await

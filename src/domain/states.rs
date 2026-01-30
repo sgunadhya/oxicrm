@@ -55,17 +55,25 @@ impl Default for OpportunityStage {
 pub enum WorkflowVersionStatus {
     Draft,
     Active,
+    Published,
+    Archived,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum WorkflowRunStatus {
+    Pending,
     Running,
     Completed,
     Failed,
+    Cancelled,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum WorkflowStepType {
+    Trigger,
+    Action,
+    Condition,
+    Delay,
     CreateRecord,
     SendEmail,
     IfElse,

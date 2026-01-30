@@ -1,5 +1,9 @@
+pub mod custom_object_handlers;
+pub mod dynamic_ui_handlers;
 pub mod email_handlers;
 pub mod fragments;
 pub mod handlers;
 pub mod lead_handlers;
+pub mod metadata_handlers;
+pub mod metadata_ui_handlers;
 pub mod oob;

@@ -1,12 +1,17 @@
 use super::entities::opportunity::{self, Entity as OpportunityEntity};
 use crate::application::ports::output::{
-    CalendarEventRepository, EmailRepository, EmailTemplateRepository, LeadRepository, OpportunityRepository, TimelineActivityRepository, UserRepository, WorkflowRepository, WorkspaceRepository,
-};
-use crate::domain::{
-    CalendarEvent, DomainError, Email, EmailTemplate, Lead, Opportunity, OpportunityStage, Person, TimelineActivity, User, Workflow, Workspace, WorkspaceMember,
+    CalendarEventRepository, EmailRepository, EmailTemplateRepository, LeadRepository,
+    MetadataRepository, OpportunityRepository, TimelineActivityRepository, UserRepository,
+    ViewRepository, WorkflowRepository, WorkspaceRepository,
 };
 use crate::domain::states::{LeadSource, LeadStatus};
-use crate::infrastructure::persistence::entities::{person, user, workspace, workspace_member};
+use crate::domain::{
+    CalendarEvent, DomainError, Email, EmailTemplate, Lead, Opportunity, OpportunityStage, Person,
+    TimelineActivity, User, Workflow, Workspace, WorkspaceMember,
+};
+use crate::infrastructure::persistence::entities::{
+    custom_object_data, person, user, workspace, workspace_member,
+};
 use async_trait::async_trait;
 use sea_orm::*;
 use uuid::Uuid;
@@ -37,6 +42,7 @@ impl crate::application::ports::output::PersonRepository for SeaOrmRepo {
             created_at: Set(person.created_at.into()),
             updated_at: Set(person.updated_at.into()),
             deleted_at: Set(None),
+            workspace_id: Set(person.workspace_id),
         };
 
         let result = model
@@ -111,6 +117,7 @@ impl OpportunityRepository for SeaOrmRepo {
             company_id: Set(opportunity.company_id),
             point_of_contact_id: Set(opportunity.point_of_contact_id),
             owner_id: Set(opportunity.owner_id),
+            workspace_id: Set(opportunity.workspace_id),
         };
 
         let result = model
@@ -289,6 +296,7 @@ impl crate::application::ports::output::CompanyRepository for SeaOrmRepo {
             domain_name: Set(company.domain_name),
             address: Set(company.address),
             employees_count: Set(company.employees_count),
+            workspace_id: Set(company.workspace_id),
         };
 
         let result = model
@@ -374,6 +382,7 @@ impl crate::application::ports::output::TaskRepository for SeaOrmRepo {
             position: Set(task.position),
             assignee_id: Set(task.assignee_id),
             due_at: Set(task.due_at.map(|d| d.into())),
+            workspace_id: Set(task.workspace_id),
         };
 
         let result = model
@@ -456,6 +465,7 @@ impl crate::application::ports::output::NoteRepository for SeaOrmRepo {
             title: Set(note.title),
             body_v2: Set(note.body_v2),
             position: Set(note.position),
+            workspace_id: Set(note.workspace_id),
         };
 
         let result = model
@@ -500,7 +510,10 @@ impl crate::application::ports::output::NoteRepository for SeaOrmRepo {
 
 #[async_trait]
 impl crate::application::ports::output::TaskTargetRepository for SeaOrmRepo {
-    async fn find_by_task_id(&self, task_id: Uuid) -> Result<Vec<crate::domain::TaskTarget>, DomainError> {
+    async fn find_by_task_id(
+        &self,
+        task_id: Uuid,
+    ) -> Result<Vec<crate::domain::TaskTarget>, DomainError> {
         use crate::infrastructure::persistence::entities::task_target;
         let models = task_target::Entity::find()
             .filter(task_target::Column::TaskId.eq(task_id))
@@ -510,7 +523,10 @@ impl crate::application::ports::output::TaskTargetRepository for SeaOrmRepo {
         Ok(models.into_iter().map(|m| m.to_domain()).collect())
     }
 
-    async fn create(&self, task_target: crate::domain::TaskTarget) -> Result<crate::domain::TaskTarget, DomainError> {
+    async fn create(
+        &self,
+        task_target: crate::domain::TaskTarget,
+    ) -> Result<crate::domain::TaskTarget, DomainError> {
         use crate::infrastructure::persistence::entities::task_target;
         let model = task_target::ActiveModel {
             id: Set(task_target.id),
@@ -566,6 +582,7 @@ impl WorkflowRepository for SeaOrmRepo {
             last_published_version_id: Set(workflow.last_published_version_id),
             created_at: Set(workflow.created_at.into()),
             updated_at: Set(workflow.updated_at.into()),
+            workspace_id: Set(workflow.workspace_id),
         };
 
         let result = model
@@ -633,6 +650,7 @@ impl CalendarEventRepository for SeaOrmRepo {
             description: Set(event.description),
             created_at: Set(event.created_at.into()),
             updated_at: Set(event.updated_at.into()),
+            workspace_id: Set(event.workspace_id),
         };
 
         let result = model
@@ -684,7 +702,10 @@ impl TimelineActivityRepository for SeaOrmRepo {
         Ok(models.into_iter().map(|m| m.to_domain()).collect())
     }
 
-    async fn find_by_person_id(&self, person_id: Uuid) -> Result<Vec<TimelineActivity>, DomainError> {
+    async fn find_by_person_id(
+        &self,
+        person_id: Uuid,
+    ) -> Result<Vec<TimelineActivity>, DomainError> {
         use crate::infrastructure::persistence::entities::timeline_activity;
         let models = timeline_activity::Entity::find()
             .filter(timeline_activity::Column::PersonId.eq(person_id))
@@ -695,7 +716,10 @@ impl TimelineActivityRepository for SeaOrmRepo {
         Ok(models.into_iter().map(|m| m.to_domain()).collect())
     }
 
-    async fn find_by_company_id(&self, company_id: Uuid) -> Result<Vec<TimelineActivity>, DomainError> {
+    async fn find_by_company_id(
+        &self,
+        company_id: Uuid,
+    ) -> Result<Vec<TimelineActivity>, DomainError> {
         use crate::infrastructure::persistence::entities::timeline_activity;
         let models = timeline_activity::Entity::find()
             .filter(timeline_activity::Column::CompanyId.eq(company_id))
@@ -706,7 +730,10 @@ impl TimelineActivityRepository for SeaOrmRepo {
         Ok(models.into_iter().map(|m| m.to_domain()).collect())
     }
 
-    async fn find_by_opportunity_id(&self, opportunity_id: Uuid) -> Result<Vec<TimelineActivity>, DomainError> {
+    async fn find_by_opportunity_id(
+        &self,
+        opportunity_id: Uuid,
+    ) -> Result<Vec<TimelineActivity>, DomainError> {
         use crate::infrastructure::persistence::entities::timeline_activity;
         let models = timeline_activity::Entity::find()
             .filter(timeline_activity::Column::OpportunityId.eq(opportunity_id))
@@ -742,6 +769,7 @@ impl TimelineActivityRepository for SeaOrmRepo {
             note_id: Set(activity.note_id),
             calendar_event_id: Set(activity.calendar_event_id),
             workflow_id: Set(activity.workflow_id),
+            workspace_id: Set(activity.workspace_id),
         };
 
         let result = model
@@ -804,7 +832,10 @@ impl EmailRepository for SeaOrmRepo {
         Ok(models.into_iter().map(|m| m.to_domain()).collect())
     }
 
-    async fn find_by_opportunity_id(&self, opportunity_id: Uuid) -> Result<Vec<Email>, DomainError> {
+    async fn find_by_opportunity_id(
+        &self,
+        opportunity_id: Uuid,
+    ) -> Result<Vec<Email>, DomainError> {
         use crate::infrastructure::persistence::entities::email;
         let models = email::Entity::find()
             .filter(email::Column::OpportunityId.eq(opportunity_id))
@@ -842,13 +873,17 @@ impl EmailRepository for SeaOrmRepo {
             EmailStatus::Received => "received",
         };
 
-        let cc_emails_json = email.cc_emails.as_ref().map(|cc| {
-            serde_json::to_value(cc).ok()
-        }).flatten();
+        let cc_emails_json = email
+            .cc_emails
+            .as_ref()
+            .map(|cc| serde_json::to_value(cc).ok())
+            .flatten();
 
-        let bcc_emails_json = email.bcc_emails.as_ref().map(|bcc| {
-            serde_json::to_value(bcc).ok()
-        }).flatten();
+        let bcc_emails_json = email
+            .bcc_emails
+            .as_ref()
+            .map(|bcc| serde_json::to_value(bcc).ok())
+            .flatten();
 
         let model = email::ActiveModel {
             id: Set(email.id),
@@ -875,6 +910,7 @@ impl EmailRepository for SeaOrmRepo {
             workflow_id: Set(email.workflow_id),
             workflow_run_id: Set(email.workflow_run_id),
             metadata: Set(email.metadata),
+            workspace_id: Set(email.workspace_id),
         };
 
         let result = model
@@ -900,13 +936,17 @@ impl EmailRepository for SeaOrmRepo {
             EmailStatus::Received => "received",
         };
 
-        let cc_emails_json = email.cc_emails.as_ref().map(|cc| {
-            serde_json::to_value(cc).ok()
-        }).flatten();
+        let cc_emails_json = email
+            .cc_emails
+            .as_ref()
+            .map(|cc| serde_json::to_value(cc).ok())
+            .flatten();
 
-        let bcc_emails_json = email.bcc_emails.as_ref().map(|bcc| {
-            serde_json::to_value(bcc).ok()
-        }).flatten();
+        let bcc_emails_json = email
+            .bcc_emails
+            .as_ref()
+            .map(|bcc| serde_json::to_value(bcc).ok())
+            .flatten();
 
         let model = email::ActiveModel {
             id: Set(email.id),
@@ -933,6 +973,7 @@ impl EmailRepository for SeaOrmRepo {
             workflow_id: Set(email.workflow_id),
             workflow_run_id: Set(email.workflow_run_id),
             metadata: Set(email.metadata),
+            workspace_id: Set(email.workspace_id),
         };
 
         let result = model
@@ -1163,6 +1204,7 @@ impl LeadRepository for SeaOrmRepo {
             converted_opportunity_id: Set(lead.converted_opportunity_id),
             converted_at: Set(lead.converted_at.map(|d| d.into())),
             last_contacted_at: Set(lead.last_contacted_at.map(|d| d.into())),
+            workspace_id: Set(lead.workspace_id),
         };
 
         let result = model
@@ -1212,6 +1254,7 @@ impl LeadRepository for SeaOrmRepo {
             converted_opportunity_id: Set(lead.converted_opportunity_id),
             converted_at: Set(lead.converted_at.map(|d| d.into())),
             last_contacted_at: Set(lead.last_contacted_at.map(|d| d.into())),
+            workspace_id: Set(lead.workspace_id),
         };
 
         let result = model
@@ -1233,6 +1276,306 @@ impl LeadRepository for SeaOrmRepo {
             .update(&self.db)
             .await
             .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl MetadataRepository for SeaOrmRepo {
+    async fn find_object_by_name(
+        &self,
+        name_singular: &str,
+    ) -> Result<Option<crate::domain::metadata::ObjectMetadata>, DomainError> {
+        use crate::infrastructure::persistence::entities::object_metadata;
+        let model = object_metadata::Entity::find()
+            .filter(object_metadata::Column::NameSingular.eq(name_singular))
+            .one(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(model.map(|m| m.to_domain()))
+    }
+
+    async fn get_schema(
+        &self,
+    ) -> Result<
+        Vec<(
+            crate::domain::metadata::ObjectMetadata,
+            Vec<crate::domain::metadata::FieldMetadata>,
+        )>,
+        DomainError,
+    > {
+        use crate::infrastructure::persistence::entities::{field_metadata, object_metadata};
+
+        let objects = object_metadata::Entity::find()
+            .find_with_related(field_metadata::Entity)
+            .all(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+
+        let schema = objects
+            .into_iter()
+            .map(|(obj, fields)| {
+                (
+                    obj.to_domain(),
+                    fields.into_iter().map(|f| f.to_domain()).collect(),
+                )
+            })
+            .collect();
+
+        Ok(schema)
+    }
+
+    async fn create_object(
+        &self,
+        object: crate::domain::metadata::ObjectMetadata,
+    ) -> Result<crate::domain::metadata::ObjectMetadata, DomainError> {
+        use crate::infrastructure::persistence::entities::object_metadata;
+        let model = object_metadata::ActiveModel {
+            id: Set(object.id),
+            created_at: Set(object.created_at.into()),
+            updated_at: Set(object.updated_at.into()),
+            name_singular: Set(object.name_singular),
+            name_plural: Set(object.name_plural),
+            description: Set(object.description),
+            workspace_id: Set(object.workspace_id),
+        };
+
+        let result = model
+            .insert(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(result.to_domain())
+    }
+
+    async fn create_field(
+        &self,
+        field: crate::domain::metadata::FieldMetadata,
+    ) -> Result<crate::domain::metadata::FieldMetadata, DomainError> {
+        use crate::domain::metadata::FieldType;
+        use crate::infrastructure::persistence::entities::field_metadata;
+
+        let type_str = match field.field_type {
+            FieldType::Text => "Text",
+            FieldType::Number => "Number",
+            FieldType::Date => "Date",
+            FieldType::Boolean => "Boolean",
+            FieldType::Select => "Select",
+            FieldType::Relation => "Relation",
+            FieldType::Json => "Json",
+        };
+
+        let model = field_metadata::ActiveModel {
+            id: Set(field.id),
+            created_at: Set(field.created_at.into()),
+            updated_at: Set(field.updated_at.into()),
+            object_metadata_id: Set(field.object_metadata_id),
+            name: Set(field.name),
+            r#type: Set(type_str.to_string()),
+            is_custom: Set(field.is_custom),
+            settings: Set(field.settings),
+        };
+
+        let result = model
+            .insert(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(result.to_domain())
+    }
+
+    async fn find_object_by_id(
+        &self,
+        id: Uuid,
+    ) -> Result<Option<crate::domain::metadata::ObjectMetadata>, DomainError> {
+        use crate::infrastructure::persistence::entities::object_metadata;
+        let model = object_metadata::Entity::find_by_id(id)
+            .one(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+
+        Ok(model.map(|m| m.to_domain()))
+    }
+}
+
+#[async_trait]
+impl ViewRepository for SeaOrmRepo {
+    async fn find_by_object(
+        &self,
+        object_metadata_id: Uuid,
+    ) -> Result<Vec<crate::domain::metadata::View>, DomainError> {
+        use crate::infrastructure::persistence::entities::view;
+        let models = view::Entity::find()
+            .filter(view::Column::ObjectMetadataId.eq(object_metadata_id))
+            .order_by_asc(view::Column::Position)
+            .all(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+    }
+
+    async fn find_by_id(
+        &self,
+        id: Uuid,
+    ) -> Result<Option<crate::domain::metadata::View>, DomainError> {
+        use crate::infrastructure::persistence::entities::view;
+        let model = view::Entity::find_by_id(id)
+            .one(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(model.map(|m| m.to_domain()))
+    }
+
+    async fn create(
+        &self,
+        view: crate::domain::metadata::View,
+    ) -> Result<crate::domain::metadata::View, DomainError> {
+        use crate::domain::metadata::ViewType;
+        use crate::infrastructure::persistence::entities::view;
+
+        let type_str = match view.view_type {
+            ViewType::Table => "Table",
+            ViewType::Kanban => "Kanban",
+            ViewType::Calendar => "Calendar",
+            ViewType::List => "List",
+        };
+
+        let model = view::ActiveModel {
+            id: Set(view.id),
+            created_at: Set(view.created_at.into()),
+            updated_at: Set(view.updated_at.into()),
+            object_metadata_id: Set(view.object_metadata_id),
+            name: Set(view.name),
+            r#type: Set(type_str.to_string()),
+            filters: Set(view.filters),
+            sort: Set(view.sort),
+            position: Set(view.position),
+            workspace_id: Set(view.workspace_id),
+        };
+
+        let result = model
+            .insert(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(result.to_domain())
+    }
+
+    async fn update(
+        &self,
+        view: crate::domain::metadata::View,
+    ) -> Result<crate::domain::metadata::View, DomainError> {
+        use crate::domain::metadata::ViewType;
+        use crate::infrastructure::persistence::entities::view;
+
+        let type_str = match view.view_type {
+            ViewType::Table => "Table",
+            ViewType::Kanban => "Kanban",
+            ViewType::Calendar => "Calendar",
+            ViewType::List => "List",
+        };
+
+        let model = view::ActiveModel {
+            id: Set(view.id),
+            updated_at: Set(chrono::Utc::now().into()),
+            name: Set(view.name),
+            r#type: Set(type_str.to_string()),
+            filters: Set(view.filters),
+            sort: Set(view.sort),
+            position: Set(view.position),
+            workspace_id: Set(view.workspace_id),
+            ..Default::default()
+        };
+
+        let result = model
+            .update(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(result.to_domain())
+    }
+
+    async fn delete(&self, id: Uuid) -> Result<(), DomainError> {
+        use crate::infrastructure::persistence::entities::view;
+        view::Entity::delete_by_id(id)
+            .exec(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl crate::application::ports::output::CustomObjectDataRepository for SeaOrmRepo {
+    async fn find_by_id(
+        &self,
+        id: Uuid,
+    ) -> Result<Option<crate::domain::custom_object_data::CustomObjectData>, DomainError> {
+        let model = custom_object_data::Entity::find_by_id(id)
+            .one(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+
+        Ok(model.map(|m| m.to_domain()))
+    }
+
+    async fn find_by_object_metadata_id(
+        &self,
+        object_metadata_id: Uuid,
+    ) -> Result<Vec<crate::domain::custom_object_data::CustomObjectData>, DomainError> {
+        let models = custom_object_data::Entity::find()
+            .filter(custom_object_data::Column::ObjectMetadataId.eq(object_metadata_id))
+            .all(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+
+        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+    }
+
+    async fn create(
+        &self,
+        data: crate::domain::custom_object_data::CustomObjectData,
+    ) -> Result<crate::domain::custom_object_data::CustomObjectData, DomainError> {
+        let model = custom_object_data::ActiveModel {
+            id: Set(data.id),
+            created_at: Set(data.created_at.into()),
+            updated_at: Set(data.updated_at.into()),
+            object_metadata_id: Set(data.object_metadata_id),
+            properties: Set(data.properties.clone()),
+            workspace_id: Set(data.workspace_id),
+        };
+
+        model
+            .insert(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+
+        Ok(data)
+    }
+
+    async fn update(
+        &self,
+        data: crate::domain::custom_object_data::CustomObjectData,
+    ) -> Result<crate::domain::custom_object_data::CustomObjectData, DomainError> {
+        let model = custom_object_data::ActiveModel {
+            id: Set(data.id),
+            created_at: Set(data.created_at.into()),
+            updated_at: Set(data.updated_at.into()),
+            object_metadata_id: Set(data.object_metadata_id),
+            properties: Set(data.properties.clone()),
+            workspace_id: Set(data.workspace_id),
+        };
+
+        model
+            .update(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+
+        Ok(data)
+    }
+
+    async fn delete(&self, id: Uuid) -> Result<(), DomainError> {
+        custom_object_data::Entity::delete_by_id(id)
+            .exec(&self.db)
+            .await
+            .map_err(|e| DomainError::InfrastructureError(e.to_string()))?;
+
         Ok(())
     }
 }

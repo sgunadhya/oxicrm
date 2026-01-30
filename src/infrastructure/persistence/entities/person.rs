@@ -12,6 +12,7 @@ pub struct Model {
     pub email: String,
     pub position: i32,
     pub company_id: Option<Uuid>,
+    pub workspace_id: Uuid,
     pub created_at: DateTimeUtc,
     pub updated_at: DateTimeUtc,
     pub deleted_at: Option<DateTimeUtc>,
@@ -33,6 +34,7 @@ impl Model {
             created_at: self.created_at,
             updated_at: self.updated_at,
             deleted_at: self.deleted_at,
+            workspace_id: self.workspace_id,
         }
     }
 }

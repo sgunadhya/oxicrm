@@ -1,4 +1,8 @@
-use super::states::{ConnectedAccountStatus, EmailDirection, EmailStatus, LeadSource, LeadStatus, OpportunityStage, TaskStatus, UserState, WorkspaceState, WorkflowVersionStatus, WorkflowRunStatus, WorkflowStepType};
+use super::states::{
+    ConnectedAccountStatus, EmailDirection, EmailStatus, LeadSource, LeadStatus, OpportunityStage,
+    TaskStatus, UserState, WorkflowRunStatus, WorkflowStepType, WorkflowVersionStatus,
+    WorkspaceState,
+};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -43,6 +47,7 @@ pub struct Person {
     pub email: String,
     pub position: i32,
     pub company_id: Option<Uuid>,
+    pub workspace_id: Uuid,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -56,6 +61,7 @@ pub struct Company {
     pub address: Option<String>,
     pub employees_count: i32,
     pub position: i32,
+    pub workspace_id: Uuid,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -73,6 +79,7 @@ pub struct Opportunity {
     pub point_of_contact_id: Option<Uuid>,
     pub company_id: Option<Uuid>,
     pub owner_id: Option<Uuid>,
+    pub workspace_id: Uuid,
 }
 
 impl Opportunity {
@@ -91,6 +98,7 @@ impl Opportunity {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             deleted_at: None,
+            workspace_id: Uuid::nil(), // Placeholder, should be passed in
         }
     }
 }
@@ -107,6 +115,7 @@ pub struct Task {
     pub position: i32,
     pub assignee_id: Option<Uuid>,
     pub due_at: Option<DateTime<Utc>>,
+    pub workspace_id: Uuid,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -118,6 +127,7 @@ pub struct Note {
     pub title: String,
     pub body_v2: Option<String>,
     pub position: i32,
+    pub workspace_id: Uuid,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -137,6 +147,7 @@ pub struct Workflow {
     pub updated_at: DateTime<Utc>,
     pub name: String,
     pub last_published_version_id: Option<Uuid>,
+    pub workspace_id: Uuid,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -189,6 +200,7 @@ pub struct CalendarEvent {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub description: Option<String>,
+    pub workspace_id: Uuid,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -213,6 +225,7 @@ pub struct TimelineActivity {
     pub note_id: Option<Uuid>,
     pub calendar_event_id: Option<Uuid>,
     pub workflow_id: Option<Uuid>,
+    pub workspace_id: Uuid,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -253,6 +266,7 @@ pub struct Email {
     pub workflow_id: Option<Uuid>,
     pub workflow_run_id: Option<Uuid>,
     pub metadata: Option<serde_json::Value>,
+    pub workspace_id: Uuid,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -278,6 +292,7 @@ pub struct Lead {
     pub converted_opportunity_id: Option<Uuid>,
     pub converted_at: Option<DateTime<Utc>>,
     pub last_contacted_at: Option<DateTime<Utc>>,
+    pub workspace_id: Uuid,
 }
 
 impl Lead {

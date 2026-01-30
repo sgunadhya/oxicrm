@@ -6,6 +6,7 @@ use uuid::Uuid;
 
 pub struct CreateWorkflowInput {
     pub name: String,
+    pub workspace_id: Uuid,
 }
 
 pub struct CreateWorkflow {
@@ -24,6 +25,7 @@ impl CreateWorkflow {
             last_published_version_id: None,
             created_at: Utc::now(),
             updated_at: Utc::now(),
+            workspace_id: input.workspace_id,
         };
 
         self.workflow_repo.create(workflow).await

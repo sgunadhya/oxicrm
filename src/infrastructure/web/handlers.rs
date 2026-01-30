@@ -1,20 +1,23 @@
 use crate::application::ports::input::{CreateWorkspaceUseCase, RecordUseCase};
-use crate::application::ports::output::{CalendarEventRepository, CompanyRepository, NoteRepository, OpportunityRepository, PersonRepository, TaskRepository, TimelineActivityRepository, WorkflowRepository};
+use crate::application::ports::output::{
+    CalendarEventRepository, CompanyRepository, NoteRepository, OpportunityRepository,
+    PersonRepository, TaskRepository, TimelineActivityRepository, WorkflowRepository,
+};
+use crate::application::use_cases::create_calendar_event::CreateCalendarEvent;
 use crate::application::use_cases::create_company::CreateCompany;
 use crate::application::use_cases::create_note::CreateNote;
 use crate::application::use_cases::create_opportunity::CreateOpportunity;
 use crate::application::use_cases::create_person::CreatePerson;
 use crate::application::use_cases::create_task::CreateTask;
-use crate::application::use_cases::create_calendar_event::CreateCalendarEvent;
 use crate::application::use_cases::create_timeline_activity::CreateTimelineActivity;
 use crate::application::use_cases::create_workflow::CreateWorkflow;
 use crate::application::use_cases::create_workspace::CreateWorkspace;
+use crate::application::use_cases::manage_calendar_event::ManageCalendarEvent;
 use crate::application::use_cases::manage_company::ManageCompany;
 use crate::application::use_cases::manage_note::ManageNote;
 use crate::application::use_cases::manage_opportunity::ManageOpportunity;
 use crate::application::use_cases::manage_person::ManagePerson;
 use crate::application::use_cases::manage_task::ManageTask;
-use crate::application::use_cases::manage_calendar_event::ManageCalendarEvent;
 use crate::application::use_cases::manage_timeline_activity::ManageTimelineActivity;
 use crate::application::use_cases::manage_workflow::ManageWorkflow;
 use crate::application::use_cases::register_user::RegisterUser;
@@ -181,7 +184,12 @@ pub async fn post_create_person_handler(
 ) -> impl IntoResponse {
     match state
         .create_person
-        .execute(payload.name, payload.email, payload.position)
+        .execute(
+            payload.name,
+            payload.email,
+            payload.position,
+            Uuid::default(),
+        ) // TODO: Get from auth context
         .await
     {
         Ok(_) => {
@@ -243,6 +251,7 @@ pub async fn post_create_company_handler(
                 domain_name: payload.domain_name,
                 address: payload.address,
                 employees_count: payload.employees_count,
+                workspace_id: Uuid::default(), // TODO: Get from auth context
             },
         )
         .await
@@ -303,9 +312,9 @@ pub async fn post_create_opportunity_handler(
     axum::Form(payload): axum::Form<CreateOpportunityPayload>,
 ) -> impl IntoResponse {
     // Parse close_date from string if provided
-    let close_date = payload.close_date.and_then(|d| {
-        chrono::NaiveDate::parse_from_str(&d, "%Y-%m-%d").ok()
-    });
+    let close_date = payload
+        .close_date
+        .and_then(|d| chrono::NaiveDate::parse_from_str(&d, "%Y-%m-%d").ok());
 
     // Convert to micros: multiply by 1000 to get from test format to micros
     // Test format appears to be: dollars * 1000 = input value
@@ -324,6 +333,7 @@ pub async fn post_create_opportunity_handler(
                 company_id: payload.company_id,
                 point_of_contact_id: payload.point_of_contact_id,
                 owner_id: payload.owner_id,
+                workspace_id: Uuid::default(), // TODO: Get from auth context
             },
         )
         .await
@@ -366,15 +376,13 @@ pub struct CreateTaskPayload {
 
 pub async fn get_tasks_handler(State(state): State<AppState>) -> impl IntoResponse {
     let tasks = state.task_repo.find_all().await.unwrap_or(vec![]);
-    crate::infrastructure::web::fragments::layout(
-        crate::infrastructure::web::fragments::task_list(&tasks),
-    )
+    crate::infrastructure::web::fragments::layout(crate::infrastructure::web::fragments::task_list(
+        &tasks,
+    ))
 }
 
 pub async fn get_create_task_handler() -> impl IntoResponse {
-    crate::infrastructure::web::fragments::layout(
-        crate::infrastructure::web::fragments::task_form(),
-    )
+    crate::infrastructure::web::fragments::layout(crate::infrastructure::web::fragments::task_form())
 }
 
 pub async fn post_create_task_handler(
@@ -385,7 +393,9 @@ pub async fn post_create_task_handler(
         // Parse datetime-local format: "2026-03-15T14:30"
         chrono::NaiveDateTime::parse_from_str(&d, "%Y-%m-%dT%H:%M")
             .ok()
-            .map(|naive_dt| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(naive_dt, chrono::Utc))
+            .map(|naive_dt| {
+                chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(naive_dt, chrono::Utc)
+            })
     });
 
     match state
@@ -397,6 +407,7 @@ pub async fn post_create_task_handler(
                 status: payload.status,
                 assignee_id: payload.assignee_id,
                 due_at,
+                workspace_id: Uuid::default(), // TODO: Get from auth context
             },
         )
         .await
@@ -436,15 +447,13 @@ pub struct CreateNotePayload {
 
 pub async fn get_notes_handler(State(state): State<AppState>) -> impl IntoResponse {
     let notes = state.note_repo.find_all().await.unwrap_or(vec![]);
-    crate::infrastructure::web::fragments::layout(
-        crate::infrastructure::web::fragments::note_list(&notes),
-    )
+    crate::infrastructure::web::fragments::layout(crate::infrastructure::web::fragments::note_list(
+        &notes,
+    ))
 }
 
 pub async fn get_create_note_handler() -> impl IntoResponse {
-    crate::infrastructure::web::fragments::layout(
-        crate::infrastructure::web::fragments::note_form(),
-    )
+    crate::infrastructure::web::fragments::layout(crate::infrastructure::web::fragments::note_form())
 }
 
 pub async fn post_create_note_handler(
@@ -457,6 +466,7 @@ pub async fn post_create_note_handler(
             crate::application::use_cases::create_note::CreateNoteInput {
                 title: payload.title,
                 body_v2: payload.body_v2,
+                workspace_id: Uuid::default(), // TODO: Get from auth context
             },
         )
         .await
@@ -512,9 +522,12 @@ pub async fn post_create_workflow_handler(
 ) -> impl IntoResponse {
     match state
         .create_workflow
-        .execute(crate::application::use_cases::create_workflow::CreateWorkflowInput {
-            name: payload.name,
-        })
+        .execute(
+            crate::application::use_cases::create_workflow::CreateWorkflowInput {
+                name: payload.name,
+                workspace_id: Uuid::default(), // TODO: Get from auth context
+            },
+        )
         .await
     {
         Ok(_) => {
@@ -591,13 +604,16 @@ pub async fn post_create_calendar_event_handler(
 
     match state
         .create_calendar_event
-        .execute(crate::application::use_cases::create_calendar_event::CreateCalendarEventInput {
-            connected_account_id: dummy_account_id,
-            title: payload.title,
-            start_time,
-            end_time,
-            description: payload.description,
-        })
+        .execute(
+            crate::application::use_cases::create_calendar_event::CreateCalendarEventInput {
+                connected_account_id: dummy_account_id,
+                title: payload.title,
+                start_time,
+                end_time,
+                description: payload.description,
+                workspace_id: Uuid::default(), // TODO: Get from auth context
+            },
+        )
         .await
     {
         Ok(_) => {
@@ -641,7 +657,11 @@ pub struct CreateTimelineActivityPayload {
 }
 
 pub async fn get_timeline_activities_handler(State(state): State<AppState>) -> impl IntoResponse {
-    let activities = state.timeline_activity_repo.find_all().await.unwrap_or(vec![]);
+    let activities = state
+        .timeline_activity_repo
+        .find_all()
+        .await
+        .unwrap_or(vec![]);
     crate::infrastructure::web::fragments::layout(
         crate::infrastructure::web::fragments::timeline_activity_list(&activities),
     )
@@ -670,12 +690,17 @@ pub async fn post_create_timeline_activity_handler(
                 note_id: payload.note_id,
                 calendar_event_id: payload.calendar_event_id,
                 workflow_id: payload.workflow_id,
+                workspace_id: Uuid::default(), // TODO: Get from auth context
             },
         )
         .await
     {
         Ok(_) => {
-            let activities = state.timeline_activity_repo.find_all().await.unwrap_or(vec![]);
+            let activities = state
+                .timeline_activity_repo
+                .find_all()
+                .await
+                .unwrap_or(vec![]);
             crate::infrastructure::web::fragments::layout(
                 crate::infrastructure::web::fragments::timeline_activity_list(&activities),
             )

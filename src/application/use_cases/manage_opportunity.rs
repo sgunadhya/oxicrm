@@ -71,6 +71,7 @@ impl ManageOpportunity {
             point_of_contact_id: input.point_of_contact_id.or(existing.point_of_contact_id),
             owner_id: input.owner_id.or(existing.owner_id),
             position: existing.position,
+            workspace_id: existing.workspace_id,
         };
 
         self.opportunity_repo.update(updated).await

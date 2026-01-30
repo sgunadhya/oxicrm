@@ -1,5 +1,9 @@
-use crate::domain::{CalendarEvent, CalendarEventParticipant, Company, ConnectedAccount, DomainError, Email, EmailTemplate, Lead, Note, Opportunity, Person, Task, TaskTarget, TimelineActivity, User, Workflow, WorkflowVersion, WorkflowVersionStep, WorkflowRun, Workspace, WorkspaceMember};
-use crate::domain::states::{LeadStatus};
+use crate::domain::states::LeadStatus;
+use crate::domain::{
+    CalendarEvent, CalendarEventParticipant, Company, ConnectedAccount, DomainError, Email,
+    EmailTemplate, Lead, Note, Opportunity, Person, Task, TaskTarget, TimelineActivity, User,
+    Workflow, WorkflowRun, WorkflowVersion, WorkflowVersionStep, Workspace, WorkspaceMember,
+};
 use async_trait::async_trait;
 
 #[async_trait]
@@ -79,14 +83,20 @@ pub trait WorkflowRepository: Send + Sync {
 pub trait WorkflowVersionRepository: Send + Sync {
     async fn find_all(&self) -> Result<Vec<WorkflowVersion>, DomainError>;
     async fn find_by_id(&self, id: uuid::Uuid) -> Result<Option<WorkflowVersion>, DomainError>;
-    async fn find_by_workflow_id(&self, workflow_id: uuid::Uuid) -> Result<Vec<WorkflowVersion>, DomainError>;
+    async fn find_by_workflow_id(
+        &self,
+        workflow_id: uuid::Uuid,
+    ) -> Result<Vec<WorkflowVersion>, DomainError>;
     async fn create(&self, version: WorkflowVersion) -> Result<WorkflowVersion, DomainError>;
     async fn update(&self, version: WorkflowVersion) -> Result<WorkflowVersion, DomainError>;
 }
 
 #[async_trait]
 pub trait WorkflowVersionStepRepository: Send + Sync {
-    async fn find_by_version_id(&self, version_id: uuid::Uuid) -> Result<Vec<WorkflowVersionStep>, DomainError>;
+    async fn find_by_version_id(
+        &self,
+        version_id: uuid::Uuid,
+    ) -> Result<Vec<WorkflowVersionStep>, DomainError>;
     async fn create(&self, step: WorkflowVersionStep) -> Result<WorkflowVersionStep, DomainError>;
     async fn delete(&self, id: uuid::Uuid) -> Result<(), DomainError>;
 }
@@ -119,18 +129,36 @@ pub trait CalendarEventRepository: Send + Sync {
 
 #[async_trait]
 pub trait CalendarEventParticipantRepository: Send + Sync {
-    async fn find_by_event_id(&self, event_id: uuid::Uuid) -> Result<Vec<CalendarEventParticipant>, DomainError>;
-    async fn create(&self, participant: CalendarEventParticipant) -> Result<CalendarEventParticipant, DomainError>;
+    async fn find_by_event_id(
+        &self,
+        event_id: uuid::Uuid,
+    ) -> Result<Vec<CalendarEventParticipant>, DomainError>;
+    async fn create(
+        &self,
+        participant: CalendarEventParticipant,
+    ) -> Result<CalendarEventParticipant, DomainError>;
     async fn delete(&self, id: uuid::Uuid) -> Result<(), DomainError>;
 }
 
 #[async_trait]
 pub trait TimelineActivityRepository: Send + Sync {
     async fn find_all(&self) -> Result<Vec<TimelineActivity>, DomainError>;
-    async fn find_by_person_id(&self, person_id: uuid::Uuid) -> Result<Vec<TimelineActivity>, DomainError>;
-    async fn find_by_company_id(&self, company_id: uuid::Uuid) -> Result<Vec<TimelineActivity>, DomainError>;
-    async fn find_by_opportunity_id(&self, opportunity_id: uuid::Uuid) -> Result<Vec<TimelineActivity>, DomainError>;
-    async fn find_by_task_id(&self, task_id: uuid::Uuid) -> Result<Vec<TimelineActivity>, DomainError>;
+    async fn find_by_person_id(
+        &self,
+        person_id: uuid::Uuid,
+    ) -> Result<Vec<TimelineActivity>, DomainError>;
+    async fn find_by_company_id(
+        &self,
+        company_id: uuid::Uuid,
+    ) -> Result<Vec<TimelineActivity>, DomainError>;
+    async fn find_by_opportunity_id(
+        &self,
+        opportunity_id: uuid::Uuid,
+    ) -> Result<Vec<TimelineActivity>, DomainError>;
+    async fn find_by_task_id(
+        &self,
+        task_id: uuid::Uuid,
+    ) -> Result<Vec<TimelineActivity>, DomainError>;
     async fn create(&self, activity: TimelineActivity) -> Result<TimelineActivity, DomainError>;
     async fn delete(&self, id: uuid::Uuid) -> Result<(), DomainError>;
 }
@@ -141,7 +169,10 @@ pub trait EmailRepository: Send + Sync {
     async fn find_by_id(&self, id: uuid::Uuid) -> Result<Option<Email>, DomainError>;
     async fn find_by_person_id(&self, person_id: uuid::Uuid) -> Result<Vec<Email>, DomainError>;
     async fn find_by_company_id(&self, company_id: uuid::Uuid) -> Result<Vec<Email>, DomainError>;
-    async fn find_by_opportunity_id(&self, opportunity_id: uuid::Uuid) -> Result<Vec<Email>, DomainError>;
+    async fn find_by_opportunity_id(
+        &self,
+        opportunity_id: uuid::Uuid,
+    ) -> Result<Vec<Email>, DomainError>;
     async fn find_pending(&self) -> Result<Vec<Email>, DomainError>;
     async fn create(&self, email: Email) -> Result<Email, DomainError>;
     async fn update(&self, email: Email) -> Result<Email, DomainError>;
@@ -165,9 +196,83 @@ pub trait LeadRepository: Send + Sync {
     async fn find_by_email(&self, email: &str) -> Result<Option<Lead>, DomainError>;
     async fn find_by_status(&self, status: LeadStatus) -> Result<Vec<Lead>, DomainError>;
     async fn find_unassigned(&self) -> Result<Vec<Lead>, DomainError>;
-    async fn find_by_assigned_to(&self, assigned_to_id: uuid::Uuid) -> Result<Vec<Lead>, DomainError>;
+    async fn find_by_assigned_to(
+        &self,
+        assigned_to_id: uuid::Uuid,
+    ) -> Result<Vec<Lead>, DomainError>;
     async fn find_high_score(&self, min_score: i32) -> Result<Vec<Lead>, DomainError>;
     async fn create(&self, lead: Lead) -> Result<Lead, DomainError>;
     async fn update(&self, lead: Lead) -> Result<Lead, DomainError>;
+    async fn delete(&self, id: uuid::Uuid) -> Result<(), DomainError>;
+}
+
+#[async_trait]
+pub trait MetadataRepository: Send + Sync {
+    async fn find_object_by_name(
+        &self,
+        name_singular: &str,
+    ) -> Result<Option<crate::domain::metadata::ObjectMetadata>, DomainError>;
+    async fn get_schema(
+        &self,
+    ) -> Result<
+        Vec<(
+            crate::domain::metadata::ObjectMetadata,
+            Vec<crate::domain::metadata::FieldMetadata>,
+        )>,
+        DomainError,
+    >;
+    async fn create_object(
+        &self,
+        object: crate::domain::metadata::ObjectMetadata,
+    ) -> Result<crate::domain::metadata::ObjectMetadata, DomainError>;
+    async fn create_field(
+        &self,
+        field: crate::domain::metadata::FieldMetadata,
+    ) -> Result<crate::domain::metadata::FieldMetadata, DomainError>;
+    async fn find_object_by_id(
+        &self,
+        id: uuid::Uuid,
+    ) -> Result<Option<crate::domain::metadata::ObjectMetadata>, DomainError>;
+}
+
+#[async_trait]
+pub trait CustomObjectDataRepository: Send + Sync {
+    async fn find_by_id(
+        &self,
+        id: uuid::Uuid,
+    ) -> Result<Option<crate::domain::custom_object_data::CustomObjectData>, DomainError>;
+    async fn find_by_object_metadata_id(
+        &self,
+        object_metadata_id: uuid::Uuid,
+    ) -> Result<Vec<crate::domain::custom_object_data::CustomObjectData>, DomainError>;
+    async fn create(
+        &self,
+        data: crate::domain::custom_object_data::CustomObjectData,
+    ) -> Result<crate::domain::custom_object_data::CustomObjectData, DomainError>;
+    async fn update(
+        &self,
+        data: crate::domain::custom_object_data::CustomObjectData,
+    ) -> Result<crate::domain::custom_object_data::CustomObjectData, DomainError>;
+    async fn delete(&self, id: uuid::Uuid) -> Result<(), DomainError>;
+}
+
+#[async_trait]
+pub trait ViewRepository: Send + Sync {
+    async fn find_by_object(
+        &self,
+        object_metadata_id: uuid::Uuid,
+    ) -> Result<Vec<crate::domain::metadata::View>, DomainError>;
+    async fn find_by_id(
+        &self,
+        id: uuid::Uuid,
+    ) -> Result<Option<crate::domain::metadata::View>, DomainError>;
+    async fn create(
+        &self,
+        view: crate::domain::metadata::View,
+    ) -> Result<crate::domain::metadata::View, DomainError>;
+    async fn update(
+        &self,
+        view: crate::domain::metadata::View,
+    ) -> Result<crate::domain::metadata::View, DomainError>;
     async fn delete(&self, id: uuid::Uuid) -> Result<(), DomainError>;
 }

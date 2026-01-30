@@ -29,6 +29,7 @@ pub struct Model {
     pub workflow_id: Option<Uuid>,
     pub workflow_run_id: Option<Uuid>,
     pub metadata: Option<Json>,
+    pub workspace_id: Uuid,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -53,13 +54,13 @@ impl Model {
         };
 
         // Parse JSON arrays for cc and bcc emails
-        let cc_emails = self.cc_emails.and_then(|json| {
-            serde_json::from_value::<Vec<String>>(json.clone()).ok()
-        });
+        let cc_emails = self
+            .cc_emails
+            .and_then(|json| serde_json::from_value::<Vec<String>>(json.clone()).ok());
 
-        let bcc_emails = self.bcc_emails.and_then(|json| {
-            serde_json::from_value::<Vec<String>>(json.clone()).ok()
-        });
+        let bcc_emails = self
+            .bcc_emails
+            .and_then(|json| serde_json::from_value::<Vec<String>>(json.clone()).ok());
 
         let metadata = self.metadata.map(|json| json.clone());
 
@@ -88,6 +89,7 @@ impl Model {
             workflow_id: self.workflow_id,
             workflow_run_id: self.workflow_run_id,
             metadata,
+            workspace_id: self.workspace_id,
         }
     }
 }

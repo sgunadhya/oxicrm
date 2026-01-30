@@ -99,6 +99,7 @@ impl EmailEventSubscriber {
             task_id: None,
             workflow_id: None,
             workflow_run_id: None,
+            workspace_id: uuid::Uuid::default(), // TODO: Resolve workspace for system emails
         };
 
         send_email_use_case
@@ -133,10 +134,7 @@ impl EmailEventSubscriber {
             .and_then(|v| v.as_str())
             .unwrap_or("Untitled Task");
 
-        tracing::info!(
-            "Sending task assignment email to: {}",
-            assignee_email
-        );
+        tracing::info!("Sending task assignment email to: {}", assignee_email);
 
         // Send assignment notification
         let input = SendEmailInput {
@@ -158,6 +156,7 @@ impl EmailEventSubscriber {
             task_id: Some(task_id),
             workflow_id: None,
             workflow_run_id: None,
+            workspace_id: uuid::Uuid::default(), // TODO: Resolve workspace for system emails
         };
 
         send_email_use_case
@@ -217,6 +216,7 @@ impl EmailEventSubscriber {
             task_id: None,
             workflow_id: None,
             workflow_run_id: None,
+            workspace_id: uuid::Uuid::default(), // TODO: Resolve workspace for system emails
         };
 
         send_email_use_case

@@ -99,6 +99,10 @@ impl WorkflowExecutor {
                 tracing::warn!("Form step not implemented yet");
                 Ok(())
             }
+            _ => {
+                tracing::warn!("Step type not implemented yet");
+                Ok(())
+            }
         }
     }
 
@@ -178,6 +182,7 @@ impl WorkflowExecutor {
             task_id: None,
             workflow_id: None,
             workflow_run_id: Some(workflow_run.id),
+            workspace_id: Uuid::default(), // TODO: Propagate workspace_id from WorkflowRun
         };
 
         self.send_email_use_case.execute(input).await?;

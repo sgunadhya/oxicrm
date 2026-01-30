@@ -1,6 +1,6 @@
 use crate::application::ports::output::{LeadRepository, TimelineActivityRepository};
-use crate::domain::{DomainError, Lead, TimelineActivity};
 use crate::domain::states::LeadStatus;
+use crate::domain::{DomainError, Lead, TimelineActivity};
 use chrono::Utc;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -64,6 +64,7 @@ impl ManageLead {
             note_id: None,
             calendar_event_id: None,
             workflow_id: None,
+            workspace_id: lead.workspace_id,
         };
         self.timeline_repo.create(activity).await?;
 

@@ -1,7 +1,7 @@
 use crate::application::ports::messaging::{DomainEvent, EventBus};
 use crate::application::ports::output::LeadRepository;
-use crate::domain::{DomainError, Lead};
 use crate::domain::states::{LeadSource, LeadStatus};
+use crate::domain::{DomainError, Lead};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -17,6 +17,7 @@ pub struct CreateLeadInput {
     pub job_title: Option<String>,
     pub source: LeadSource,
     pub notes: Option<String>,
+    pub workspace_id: Uuid,
 }
 
 pub struct CreateLead {
@@ -61,6 +62,7 @@ impl CreateLead {
             converted_opportunity_id: None,
             converted_at: None,
             last_contacted_at: None,
+            workspace_id: input.workspace_id,
         };
 
         // 3. Calculate score

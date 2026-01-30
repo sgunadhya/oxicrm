@@ -8,6 +8,9 @@ mod m20240130_000004_enhance_people;
 mod m20240130_000005_create_companies;
 mod m20240130_000006_create_email_system;
 mod m20240130_000007_create_lead_system;
+mod m20240130_000008_create_metadata_engine;
+mod m20240130_000009_create_custom_object_data;
+mod m20240130_000010_add_workspace_id;
 
 pub struct Migrator;
 
@@ -22,6 +25,9 @@ impl MigratorTrait for Migrator {
             Box::new(m20240130_000005_create_companies::CreateCompanies),
             Box::new(m20240130_000006_create_email_system::CreateEmailSystem),
             Box::new(m20240130_000007_create_lead_system::CreateLeadSystem),
+            Box::new(m20240130_000008_create_metadata_engine::CreateMetadataEngine),
+            Box::new(m20240130_000009_create_custom_object_data::Migration),
+            Box::new(m20240130_000010_add_workspace_id::Migration),
         ]
     }
 }

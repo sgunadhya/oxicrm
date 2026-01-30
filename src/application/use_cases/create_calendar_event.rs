@@ -10,6 +10,7 @@ pub struct CreateCalendarEventInput {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub description: Option<String>,
+    pub workspace_id: Uuid,
 }
 
 pub struct CreateCalendarEvent {
@@ -18,10 +19,15 @@ pub struct CreateCalendarEvent {
 
 impl CreateCalendarEvent {
     pub fn new(calendar_event_repo: Arc<dyn CalendarEventRepository>) -> Self {
-        Self { calendar_event_repo }
+        Self {
+            calendar_event_repo,
+        }
     }
 
-    pub async fn execute(&self, input: CreateCalendarEventInput) -> Result<CalendarEvent, DomainError> {
+    pub async fn execute(
+        &self,
+        input: CreateCalendarEventInput,
+    ) -> Result<CalendarEvent, DomainError> {
         let event = CalendarEvent {
             id: Uuid::new_v4(),
             connected_account_id: input.connected_account_id,
@@ -29,6 +35,7 @@ impl CreateCalendarEvent {
             start_time: input.start_time,
             end_time: input.end_time,
             description: input.description,
+            workspace_id: input.workspace_id,
             created_at: Utc::now(),
             updated_at: Utc::now(),
         };

@@ -12,6 +12,7 @@ pub struct Model {
     pub title: String,
     pub body_v2: Option<String>,
     pub position: i32,
+    pub workspace_id: Uuid,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -29,6 +30,7 @@ impl Model {
             title: self.title,
             body_v2: self.body_v2,
             position: self.position,
+            workspace_id: self.workspace_id,
         }
     }
 }

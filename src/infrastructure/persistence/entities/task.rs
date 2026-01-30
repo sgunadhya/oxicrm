@@ -15,6 +15,7 @@ pub struct Model {
     pub position: i32,
     pub assignee_id: Option<Uuid>,
     pub due_at: Option<DateTimeWithTimeZone>,
+    pub workspace_id: Uuid,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -44,6 +45,7 @@ impl Model {
             position: self.position,
             assignee_id: self.assignee_id,
             due_at: self.due_at.map(|d| d.into()),
+            workspace_id: self.workspace_id,
         }
     }
 }

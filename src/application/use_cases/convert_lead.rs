@@ -2,8 +2,10 @@ use crate::application::ports::output::{
     CompanyRepository, LeadRepository, OpportunityRepository, PersonRepository,
     TimelineActivityRepository,
 };
-use crate::domain::{Company, DomainError, Lead, Opportunity, OpportunityStage, Person, TimelineActivity};
 use crate::domain::states::LeadStatus;
+use crate::domain::{
+    Company, DomainError, Lead, Opportunity, OpportunityStage, Person, TimelineActivity,
+};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -62,9 +64,7 @@ impl ConvertLead {
 
         // 2. Check if already converted
         if lead.is_converted() {
-            return Err(DomainError::InvalidState(
-                "Lead already converted".into(),
-            ));
+            return Err(DomainError::InvalidState("Lead already converted".into()));
         }
 
         let mut person_id = None;
@@ -82,6 +82,7 @@ impl ConvertLead {
                 email: lead.email.clone(),
                 position: 0,
                 company_id: None, // Will be set if creating company
+                workspace_id: lead.workspace_id,
             };
             use crate::domain::HardGuard;
             person.validate()?;
@@ -98,13 +99,11 @@ impl ConvertLead {
                 updated_at: Utc::now(),
                 deleted_at: None,
                 name: company_name.clone(),
-                domain_name: format!(
-                    "{}.com",
-                    company_name.to_lowercase().replace(" ", "")
-                ),
+                domain_name: format!("{}.com", company_name.to_lowercase().replace(" ", "")),
                 address: None,
                 employees_count: 0,
                 position: 0,
+                workspace_id: lead.workspace_id,
             };
             let company = self.company_repo.create(company).await?;
             company_id = Some(company.id);
@@ -139,6 +138,7 @@ impl ConvertLead {
                 point_of_contact_id: person_id,
                 company_id,
                 owner_id: lead.assigned_to_id,
+                workspace_id: lead.workspace_id,
             };
             let opportunity = self.opportunity_repo.create(opportunity).await?;
             opportunity_id = Some(opportunity.id);
@@ -173,6 +173,7 @@ impl ConvertLead {
             note_id: None,
             calendar_event_id: None,
             workflow_id: None,
+            workspace_id: lead.workspace_id,
         };
         self.timeline_repo.create(timeline).await?;
 

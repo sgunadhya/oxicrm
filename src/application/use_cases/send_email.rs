@@ -1,5 +1,7 @@
 use crate::application::ports::email::{EmailProvider, SendEmailRequest, TemplateEngine};
-use crate::application::ports::output::{EmailRepository, EmailTemplateRepository, TimelineActivityRepository};
+use crate::application::ports::output::{
+    EmailRepository, EmailTemplateRepository, TimelineActivityRepository,
+};
 use crate::domain::{DomainError, Email, EmailDirection, EmailStatus, HardGuard, TimelineActivity};
 use chrono::Utc;
 use serde::Deserialize;
@@ -23,6 +25,7 @@ pub struct SendEmailInput {
     pub task_id: Option<Uuid>,
     pub workflow_id: Option<Uuid>,
     pub workflow_run_id: Option<Uuid>,
+    pub workspace_id: Uuid,
 }
 
 pub struct SendEmail {
@@ -52,36 +55,50 @@ impl SendEmail {
 
     pub async fn execute(&self, input: SendEmailInput) -> Result<Email, DomainError> {
         // 1. Resolve template if provided
-        let (subject, body_text, body_html, template_id) = if let Some(template_id) = input.template_id {
-            let template = self.email_template_repo.find_by_id(template_id)
-                .await?
-                .ok_or_else(|| DomainError::NotFound)?;
+        let (subject, body_text, body_html, template_id) =
+            if let Some(template_id) = input.template_id {
+                let template = self
+                    .email_template_repo
+                    .find_by_id(template_id)
+                    .await?
+                    .ok_or_else(|| DomainError::NotFound)?;
 
-            let variables = input.template_variables.unwrap_or_else(|| serde_json::json!({}));
+                let variables = input
+                    .template_variables
+                    .unwrap_or_else(|| serde_json::json!({}));
 
-            // Render template with variables
-            let rendered_subject = self.template_engine
-                .render(&template.subject, &variables)
-                .map_err(|e| DomainError::InfrastructureError(format!("Template render error: {}", e)))?;
+                // Render template with variables
+                let rendered_subject = self
+                    .template_engine
+                    .render(&template.subject, &variables)
+                    .map_err(|e| {
+                    DomainError::InfrastructureError(format!("Template render error: {}", e))
+                })?;
 
-            let rendered_body_text = self.template_engine
-                .render(&template.body_text, &variables)
-                .map_err(|e| DomainError::InfrastructureError(format!("Template render error: {}", e)))?;
+                let rendered_body_text = self
+                    .template_engine
+                    .render(&template.body_text, &variables)
+                    .map_err(|e| {
+                        DomainError::InfrastructureError(format!("Template render error: {}", e))
+                    })?;
 
-            let rendered_body_html = if let Some(html) = &template.body_html {
-                Some(
-                    self.template_engine
-                        .render(html, &variables)
-                        .map_err(|e| DomainError::InfrastructureError(format!("Template render error: {}", e)))?
+                let rendered_body_html = if let Some(html) = &template.body_html {
+                    Some(self.template_engine.render(html, &variables).map_err(|e| {
+                        DomainError::InfrastructureError(format!("Template render error: {}", e))
+                    })?)
+                } else {
+                    None
+                };
+
+                (
+                    rendered_subject,
+                    rendered_body_text,
+                    rendered_body_html,
+                    Some(template_id),
                 )
             } else {
-                None
+                (input.subject, input.body_text, input.body_html, None)
             };
-
-            (rendered_subject, rendered_body_text, rendered_body_html, Some(template_id))
-        } else {
-            (input.subject, input.body_text, input.body_html, None)
-        };
 
         // 2. Create email record with pending status
         let email = Email {
@@ -109,6 +126,7 @@ impl SendEmail {
             workflow_id: input.workflow_id,
             workflow_run_id: input.workflow_run_id,
             metadata: None,
+            workspace_id: input.workspace_id,
         };
 
         // Validate email
@@ -164,6 +182,7 @@ impl SendEmail {
             note_id: None,
             calendar_event_id: None,
             workflow_id: updated_email.workflow_id,
+            workspace_id: updated_email.workspace_id,
         };
 
         let timeline_activity = self.timeline_repo.create(timeline_activity).await?;

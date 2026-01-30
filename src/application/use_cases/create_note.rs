@@ -9,6 +9,7 @@ use uuid::Uuid;
 pub struct CreateNoteInput {
     pub title: String,
     pub body_v2: Option<String>,
+    pub workspace_id: Uuid,
 }
 
 pub struct CreateNote {
@@ -34,6 +35,7 @@ impl CreateNote {
             title: input.title,
             body_v2: input.body_v2,
             position: 0,
+            workspace_id: input.workspace_id,
         };
 
         self.note_repo.create(note).await

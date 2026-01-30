@@ -16,6 +16,7 @@ pub struct Model {
     pub note_id: Option<Uuid>,
     pub calendar_event_id: Option<Uuid>,
     pub workflow_id: Option<Uuid>,
+    pub workspace_id: Uuid,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -37,6 +38,7 @@ impl Model {
             note_id: self.note_id,
             calendar_event_id: self.calendar_event_id,
             workflow_id: self.workflow_id,
+            workspace_id: self.workspace_id,
         }
     }
 }

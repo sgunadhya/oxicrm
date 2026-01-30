@@ -10,6 +10,7 @@ pub struct Model {
     pub updated_at: DateTimeWithTimeZone,
     pub name: String,
     pub last_published_version_id: Option<Uuid>,
+    pub workspace_id: Uuid,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -25,6 +26,7 @@ impl Model {
             updated_at: self.updated_at.into(),
             name: self.name,
             last_published_version_id: self.last_published_version_id,
+            workspace_id: self.workspace_id,
         }
     }
 }

@@ -1,8 +1,8 @@
 use crate::application::ports::messaging::EventBus;
 use crate::application::ports::output::TimelineActivityRepository;
 use crate::application::use_cases::send_email::{SendEmail, SendEmailInput};
-use crate::domain::{Lead, TimelineActivity};
 use crate::domain::states::LeadSource;
+use crate::domain::{Lead, TimelineActivity};
 use chrono::Utc;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -42,7 +42,12 @@ impl LeadEventSubscriber {
 
                 let result = match event.topic.as_str() {
                     "lead.created" => {
-                        Self::handle_lead_created(&send_email_use_case, &timeline_repo, &event.payload).await
+                        Self::handle_lead_created(
+                            &send_email_use_case,
+                            &timeline_repo,
+                            &event.payload,
+                        )
+                        .await
                     }
                     _ => {
                         // Ignore other events
@@ -67,8 +72,8 @@ impl LeadEventSubscriber {
         payload: &str,
     ) -> Result<(), String> {
         // Parse lead data from payload
-        let lead: Lead = serde_json::from_str(payload)
-            .map_err(|e| format!("Failed to parse lead: {}", e))?;
+        let lead: Lead =
+            serde_json::from_str(payload).map_err(|e| format!("Failed to parse lead: {}", e))?;
 
         tracing::info!(
             "New lead created: {} {} ({})",
@@ -123,6 +128,7 @@ impl LeadEventSubscriber {
             task_id: None,
             workflow_id: None,
             workflow_run_id: None,
+            workspace_id: lead.workspace_id,
         };
 
         send_email_use_case
@@ -143,6 +149,7 @@ impl LeadEventSubscriber {
             note_id: None,
             calendar_event_id: None,
             workflow_id: None,
+            workspace_id: lead.workspace_id,
         };
 
         timeline_repo

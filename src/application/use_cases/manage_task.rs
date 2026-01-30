@@ -63,6 +63,7 @@ impl ManageTask {
             position: existing.position,
             assignee_id: input.assignee_id.or(existing.assignee_id),
             due_at: input.due_at.or(existing.due_at),
+            workspace_id: existing.workspace_id,
         };
 
         self.task_repo.update(updated).await

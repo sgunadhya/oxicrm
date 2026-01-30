@@ -1,5 +1,5 @@
-use crate::domain::Lead;
 use crate::domain::states::{LeadSource, LeadStatus};
+use crate::domain::Lead;
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -29,6 +29,7 @@ pub struct Model {
     pub converted_opportunity_id: Option<Uuid>,
     pub converted_at: Option<DateTimeUtc>,
     pub last_contacted_at: Option<DateTimeUtc>,
+    pub workspace_id: Uuid,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -75,6 +76,7 @@ impl Model {
             converted_opportunity_id: self.converted_opportunity_id,
             converted_at: self.converted_at,
             last_contacted_at: self.last_contacted_at,
+            workspace_id: self.workspace_id,
         }
     }
 }

@@ -68,6 +68,7 @@ pub async fn create_lead_handler(
         job_title: payload.job_title,
         source,
         notes: payload.notes,
+        workspace_id: Uuid::default(), // TODO: Get from auth context
     };
 
     match state.create_lead.execute(input).await {
@@ -186,6 +187,7 @@ pub async fn lead_capture_webhook_handler(
         job_title: payload.job_title,
         source: LeadSource::WebForm,
         notes: payload.notes,
+        workspace_id: Uuid::default(), // TODO: Get from auth context
     };
 
     match state.create_lead.execute(input).await {

@@ -16,6 +16,7 @@ pub struct CreateTimelineActivityInput {
     pub note_id: Option<Uuid>,
     pub calendar_event_id: Option<Uuid>,
     pub workflow_id: Option<Uuid>,
+    pub workspace_id: Uuid,
 }
 
 pub struct CreateTimelineActivity {
@@ -27,7 +28,10 @@ impl CreateTimelineActivity {
         Self { activity_repo }
     }
 
-    pub async fn execute(&self, input: CreateTimelineActivityInput) -> Result<TimelineActivity, DomainError> {
+    pub async fn execute(
+        &self,
+        input: CreateTimelineActivityInput,
+    ) -> Result<TimelineActivity, DomainError> {
         let activity = TimelineActivity {
             id: Uuid::new_v4(),
             created_at: Utc::now(),
@@ -40,6 +44,7 @@ impl CreateTimelineActivity {
             note_id: input.note_id,
             calendar_event_id: input.calendar_event_id,
             workflow_id: input.workflow_id,
+            workspace_id: input.workspace_id,
         };
 
         self.activity_repo.create(activity).await

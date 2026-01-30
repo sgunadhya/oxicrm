@@ -11,6 +11,7 @@ pub struct CreateCompanyInput {
     pub domain_name: String,
     pub address: Option<String>,
     pub employees_count: Option<i32>,
+    pub workspace_id: Uuid,
 }
 
 pub struct CreateCompany {
@@ -44,6 +45,7 @@ impl CreateCompany {
             // I replaced `employees: Option<i32>` with `employees_count: i32`.
             // So `employees` field should NOT be here.
             position: 0,
+            workspace_id: input.workspace_id,
         };
 
         self.company_repo.create(company).await

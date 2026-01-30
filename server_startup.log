@@ -1,0 +1,100 @@
+warning: variant `Table` is never constructed
+  --> migration/src/m20240130_000002_create_users.rs:52:5
+   |
+51 | enum Users {
+   |      ----- variant in this enum
+52 |     Table,
+   |     ^^^^^
+   |
+   = note: `#[warn(dead_code)]` on by default
+
+warning: `migration` (lib) generated 1 warning
+   Compiling oxicrm v0.1.0 (/Users/sushantsrivastava/code/oxicrm)
+warning: unused imports: `FieldType` and `ViewType`
+ --> src/infrastructure/persistence/entities/object_metadata.rs:1:31
+  |
+1 | use crate::domain::metadata::{FieldType, ViewType};
+  |                               ^^^^^^^^^  ^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `Markup`
+ --> src/infrastructure/web/dynamic_ui_handlers.rs:7:18
+  |
+7 | use maud::{html, Markup, PreEscaped};
+  |                  ^^^^^^
+
+warning: unused import: `ObjectMetadata`
+ --> src/infrastructure/web/metadata_handlers.rs:3:42
+  |
+3 | use crate::domain::metadata::{FieldType, ObjectMetadata, ViewType};
+  |                                          ^^^^^^^^^^^^^^
+
+warning: unused import: `Serialize`
+  --> src/infrastructure/web/metadata_handlers.rs:10:26
+   |
+10 | use serde::{Deserialize, Serialize};
+   |                          ^^^^^^^^^
+
+warning: unused import: `crate::application::use_cases::manage_metadata::ManageMetadata`
+ --> src/infrastructure/web/metadata_ui_handlers.rs:1:5
+  |
+1 | use crate::application::use_cases::manage_metadata::ManageMetadata;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `Markup`
+ --> src/infrastructure/web/metadata_ui_handlers.rs:8:18
+  |
+8 | use maud::{html, Markup};
+  |                  ^^^^^^
+
+warning: unused import: `std::sync::Arc`
+ --> src/infrastructure/web/metadata_ui_handlers.rs:9:5
+  |
+9 | use std::sync::Arc;
+  |     ^^^^^^^^^^^^^^
+
+warning: unused import: `application::workflow::executor::WorkflowExecutor`
+   --> src/main.rs:114:9
+    |
+114 |     use application::workflow::executor::WorkflowExecutor;
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused variable: `pid`
+   --> src/application/use_cases/convert_lead.rs:113:25
+    |
+113 |             if let Some(pid) = person_id {
+    |                         ^^^ help: if this is intentional, prefix it with an underscore: `_pid`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: variable does not need to be mutable
+  --> src/application/workflow/executor.rs:38:13
+   |
+38 |         let mut workflow_run = WorkflowRun {
+   |             ----^^^^^^^^^^^^
+   |             |
+   |             help: remove this `mut`
+   |
+   = note: `#[warn(unused_mut)]` on by default
+
+error[E0382]: borrow of moved value: `custom_object_app_state`
+   --> src/main.rs:511:21
+    |
+457 |     let custom_object_app_state = CustomObjectAppState {
+    |         ----------------------- move occurs because `custom_object_app_state` has type `CustomObjectAppState`, which does not implement the `Copy` trait
+...
+473 |         .with_state(custom_object_app_state);
+    |                     ----------------------- value moved here
+...
+511 |         .with_state(custom_object_app_state.clone());
+    |                     ^^^^^^^^^^^^^^^^^^^^^^^ value borrowed here after move
+    |
+help: consider cloning the value if the performance cost is acceptable
+    |
+473 |         .with_state(custom_object_app_state.clone());
+    |                                            ++++++++
+
+For more information about this error, try `rustc --explain E0382`.
+warning: `oxicrm` (bin "oxicrm") generated 10 warnings
+error: could not compile `oxicrm` (bin "oxicrm") due to 1 previous error; 10 warnings emitted

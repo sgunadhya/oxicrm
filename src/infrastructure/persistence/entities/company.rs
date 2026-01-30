@@ -14,6 +14,7 @@ pub struct Model {
     pub domain_name: String,
     pub address: Option<String>, // Stored as JSON or Text
     pub employees_count: i32,
+    pub workspace_id: Uuid,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -33,6 +34,7 @@ impl Model {
             address: self.address,
             employees_count: self.employees_count,
             position: 0, // Default position
+            workspace_id: self.workspace_id,
         }
     }
 }

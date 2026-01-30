@@ -52,6 +52,7 @@ impl ManageNote {
             title: input.title.unwrap_or(existing.title),
             body_v2: input.body_v2.or(existing.body_v2),
             position: existing.position,
+            workspace_id: existing.workspace_id,
         };
 
         self.note_repo.update(updated).await

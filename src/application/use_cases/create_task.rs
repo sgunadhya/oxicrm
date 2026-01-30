@@ -12,6 +12,7 @@ pub struct CreateTaskInput {
     pub status: Option<String>,
     pub assignee_id: Option<Uuid>,
     pub due_at: Option<chrono::DateTime<Utc>>,
+    pub workspace_id: Uuid,
 }
 
 pub struct CreateTask {
@@ -47,6 +48,7 @@ impl CreateTask {
             position: 0, // Auto-assigned
             assignee_id: input.assignee_id,
             due_at: input.due_at,
+            workspace_id: input.workspace_id,
         };
 
         self.task_repo.create(task).await

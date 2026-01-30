@@ -18,6 +18,7 @@ impl CreatePerson {
         name: String,
         email: String,
         position: i32,
+        workspace_id: Uuid,
     ) -> Result<Person, DomainError> {
         // Enforce invariants first (uniqueness check via find_by_email)
         if (self.person_repo.find_by_email(&email).await?).is_some() {
@@ -33,6 +34,7 @@ impl CreatePerson {
             email,
             position,
             company_id: None,
+            workspace_id,
         };
 
         // Validate domain invariants

@@ -9,11 +9,40 @@ pub fn layout(content: Markup) -> Markup {
                 title { "Twenty CRM" }
                 script src="https://unpkg.com/htmx.org@1.9.10" {}
                 script src="https://unpkg.com/alpinejs@3.13.3" defer {}
-                // Tailwind CSS for styling (CDN for scaffolding)
+                // Tailwind CSS
                 script src="https://cdn.tailwindcss.com" {}
+                // Add some custom styles for the sidebar transition if needed
             }
-            body class="bg-gray-100" {
-                (content)
+            body class="bg-gray-100 font-sans" {
+                div class="flex h-screen overflow-hidden" {
+                    // Sidebar
+                    aside class="w-64 bg-gray-800 text-white flex-shrink-0" {
+                         div class="p-6" {
+                             h1 class="text-2xl font-bold tracking-wider" { "OxiCRM" }
+                         }
+                         nav class="mt-6" {
+                             a href="/" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white" { "Dashboard" }
+                             a href="/people" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white" { "People" }
+                             a href="/companies" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white" { "Companies" }
+                             a href="/opportunities" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white" { "Opportunities" }
+
+                             div class="border-t border-gray-700 my-4" {}
+
+                             // Dynamically loaded custom objects link (placeholder for now, implementing dynamic load next)
+                             // Ideally we pass the list of objects here, or fetch it via HTMX
+                             div id="nav-custom-objects" hx-get="/api/nav/custom-objects" hx-trigger="load" {}
+
+                             div class="border-t border-gray-700 my-4" {}
+
+                             a href="/settings/objects" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white" { "Settings" }
+                         }
+                    }
+
+                    // Main Content
+                    main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100" {
+                        (content)
+                    }
+                }
             }
         }
     }

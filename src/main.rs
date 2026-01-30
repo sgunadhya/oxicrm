@@ -107,6 +107,7 @@ async fn main() {
     // Email System Initialization
     use application::events::email_subscriber::EmailEventSubscriber;
     use application::jobs::email_worker::EmailJobWorker;
+    use application::use_cases::manage_custom_object_data::ManageCustomObjectData;
     use application::use_cases::manage_email_template::ManageEmailTemplate;
     use application::use_cases::receive_email::ReceiveEmail;
     use application::use_cases::send_email::SendEmail;
@@ -118,6 +119,8 @@ async fn main() {
     use application::use_cases::convert_lead::ConvertLead;
     use application::use_cases::create_lead::CreateLead;
     use application::use_cases::manage_lead::ManageLead;
+    use application::use_cases::manage_metadata::ManageMetadata;
+    use application::use_cases::manage_view::ManageView;
 
     let email_provider = Arc::new(MockEmailProvider::new());
     let template_engine = Arc::new(SimpleTemplateEngine::new());
@@ -165,6 +168,11 @@ async fn main() {
         repo.clone(),
     ));
 
+    let manage_metadata_use_case = Arc::new(ManageMetadata::new(repo.clone()));
+    let manage_view_use_case = Arc::new(ManageView::new(repo.clone()));
+    let manage_custom_object_data_use_case =
+        Arc::new(ManageCustomObjectData::new(repo.clone(), repo.clone()));
+
     // Start lead event subscriber
     let lead_subscriber = Arc::new(LeadEventSubscriber::new(
         event_bus.clone(),
@@ -178,11 +186,8 @@ async fn main() {
 
     // Start job worker
     let (email_job_sender, email_job_receiver) = mpsc::channel(100);
-    let email_worker = EmailJobWorker::new(
-        repo.clone(),
-        email_provider.clone(),
-        email_job_receiver,
-    );
+    let email_worker =
+        EmailJobWorker::new(repo.clone(), email_provider.clone(), email_job_receiver);
     tokio::spawn(async move {
         email_worker.start().await;
     });
@@ -369,8 +374,7 @@ async fn main() {
         .route("/api/emails/:id", axum::routing::get(get_email_handler))
         .route(
             "/api/email-templates",
-            axum::routing::get(list_email_templates_handler)
-                .post(create_email_template_handler),
+            axum::routing::get(list_email_templates_handler).post(create_email_template_handler),
         )
         .route(
             "/api/email-templates/:id",
@@ -387,8 +391,7 @@ async fn main() {
     // Lead System Routes
     use infrastructure::web::lead_handlers::{
         convert_lead_handler, create_lead_handler, delete_lead_handler, get_lead_handler,
-        lead_capture_webhook_handler, list_leads_handler, update_lead_status_handler,
-        LeadAppState,
+        lead_capture_webhook_handler, list_leads_handler, update_lead_status_handler, LeadAppState,
     };
 
     let lead_app_state = LeadAppState {
@@ -402,10 +405,7 @@ async fn main() {
         .route("/api/leads", axum::routing::post(create_lead_handler))
         .route("/api/leads", axum::routing::get(list_leads_handler))
         .route("/api/leads/:id", axum::routing::get(get_lead_handler))
-        .route(
-            "/api/leads/:id",
-            axum::routing::delete(delete_lead_handler),
-        )
+        .route("/api/leads/:id", axum::routing::delete(delete_lead_handler))
         .route(
             "/api/leads/:id/convert",
             axum::routing::post(convert_lead_handler),
@@ -420,8 +420,103 @@ async fn main() {
         )
         .with_state(lead_app_state);
 
+    // Metadata System Routes
+    use infrastructure::web::metadata_handlers::{
+        create_field_handler, create_object_handler, create_view_handler, delete_view_handler,
+        get_schema_handler, list_views_handler, update_view_handler, MetadataAppState,
+    };
+
+    let metadata_app_state = MetadataAppState {
+        manage_metadata: manage_metadata_use_case.clone(),
+        manage_view: manage_view_use_case.clone(),
+    };
+
+    let metadata_router = Router::new()
+        .route("/api/schema", axum::routing::get(get_schema_handler))
+        .route("/api/objects", axum::routing::post(create_object_handler))
+        .route(
+            "/api/objects/:id/fields",
+            axum::routing::post(create_field_handler),
+        )
+        .route(
+            "/api/views",
+            axum::routing::get(list_views_handler).post(create_view_handler),
+        )
+        .route(
+            "/api/views/:id",
+            axum::routing::put(update_view_handler).delete(delete_view_handler),
+        )
+        .with_state(metadata_app_state);
+
+    // Custom Object System Routes
+    use infrastructure::web::custom_object_handlers::{
+        create_record_handler, delete_record_handler, get_record_handler, list_records_handler,
+        update_record_handler, CustomObjectAppState,
+    };
+
+    let custom_object_app_state = CustomObjectAppState {
+        manage_custom_object_data: manage_custom_object_data_use_case.clone(),
+        manage_metadata: manage_metadata_use_case.clone(),
+    };
+
+    let custom_object_router = Router::new()
+        .route(
+            "/api/objects/:id/records",
+            axum::routing::get(list_records_handler).post(create_record_handler),
+        )
+        .route(
+            "/api/records/:id",
+            axum::routing::get(get_record_handler)
+                .put(update_record_handler)
+                .delete(delete_record_handler),
+        )
+        .with_state(custom_object_app_state.clone());
+
+    // UI Routes for Metadata and Dynamic Objects
+    use infrastructure::web::dynamic_ui_handlers::{
+        dynamic_record_create_form_handler, dynamic_record_list_handler, nav_custom_objects_handler,
+    };
+    use infrastructure::web::metadata_ui_handlers::{
+        settings_create_object_form_handler, settings_object_detail_handler,
+        settings_objects_list_handler,
+    };
+
+    let ui_router = Router::new()
+        // Metadata Settings
+        .route(
+            "/settings/objects",
+            axum::routing::get(settings_objects_list_handler),
+        )
+        .route(
+            "/settings/objects/new",
+            axum::routing::get(settings_create_object_form_handler),
+        )
+        .route(
+            "/settings/objects/:id",
+            axum::routing::get(settings_object_detail_handler),
+        )
+        // Dynamic Objects
+        .route(
+            "/app/objects/:id",
+            axum::routing::get(dynamic_record_list_handler),
+        )
+        .route(
+            "/app/objects/:id/new",
+            axum::routing::get(dynamic_record_create_form_handler),
+        )
+        .route(
+            "/api/nav/custom-objects",
+            axum::routing::get(nav_custom_objects_handler),
+        )
+        .with_state(custom_object_app_state.clone());
+
     // Merge routers
-    let app = app.merge(email_router).merge(lead_router);
+    let app = app
+        .merge(email_router)
+        .merge(lead_router)
+        .merge(metadata_router)
+        .merge(custom_object_router)
+        .merge(ui_router);
 
     let listener = TcpListener::bind("0.0.0.0:3001").await.unwrap();
     println!("Listening on {}", listener.local_addr().unwrap());

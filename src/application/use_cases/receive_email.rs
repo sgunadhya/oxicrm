@@ -58,6 +58,7 @@ impl ReceiveEmail {
             workflow_id: None,
             workflow_run_id: None,
             metadata: None,
+            workspace_id: Uuid::default(), // TODO: Resolve workspace from To address or domain
         };
 
         // Validate email
@@ -80,6 +81,7 @@ impl ReceiveEmail {
             note_id: None,
             calendar_event_id: None,
             workflow_id: email.workflow_id,
+            workspace_id: email.workspace_id,
         };
 
         let timeline_activity = self.timeline_repo.create(timeline_activity).await?;

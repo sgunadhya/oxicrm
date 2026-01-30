@@ -13,6 +13,7 @@ pub struct Model {
     pub start_time: DateTimeWithTimeZone,
     pub end_time: DateTimeWithTimeZone,
     pub description: Option<String>,
+    pub workspace_id: Uuid,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -31,6 +32,7 @@ impl Model {
             start_time: self.start_time.into(),
             end_time: self.end_time.into(),
             description: self.description,
+            workspace_id: self.workspace_id,
         }
     }
 }
